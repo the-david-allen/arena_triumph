@@ -19,6 +19,7 @@ build/
 dist/
 .vercel/
 .wrangler/
+.open-next/
 
 # OS files
 .DS_Store
