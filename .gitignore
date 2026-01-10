@@ -16,6 +16,8 @@ node_modules/
 out/
 build/
 dist/
+.vercel/
+.wrangler/
 
 # OS files
 .DS_Store
