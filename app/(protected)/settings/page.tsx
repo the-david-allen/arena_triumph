@@ -1,8 +1,6 @@
 import { Card } from '@/components/ui/Card'
 import { createClient } from '@/lib/supabase/server'
 
-export const runtime = 'edge'
-
 export default async function SettingsPage() {
   const supabase = await createClient()
   const {

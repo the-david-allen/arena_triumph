@@ -2,8 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import { Card } from '@/components/ui/Card'
 import { redirect } from 'next/navigation'
 
-export const runtime = 'edge'
-
 export default async function MainPage() {
   const supabase = await createClient()
   const {
