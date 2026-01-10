@@ -1,0 +1,22 @@
+
+# Creation
+createPrompt.txt
+
+# Environment files with sensitive credentials
+db.env
+schema.sql
+.env.local
+.env*.local
+
+# Node modules (if you add npm packages later)
+node_modules/
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# OS files
+.DS_Store
+Thumbs.db
