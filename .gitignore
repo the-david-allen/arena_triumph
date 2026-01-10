@@ -1,6 +1,7 @@
 
 # Creation
 createPrompt.txt
+ArenaPRD.md
 
 # Environment files with sensitive credentials
 db.env
