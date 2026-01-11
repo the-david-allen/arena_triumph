@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+export const runtime = "edge";
+
 const gearTypes = [
   { name: "Helm", href: "/obtain-gear/helm", icon: "🪖" },
   { name: "Chestpiece", href: "/obtain-gear/chestpiece", icon: "🛡️" },
