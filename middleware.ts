@@ -29,10 +29,7 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Refresh session
-  await supabase.auth.getUser();
-
-  // Check authentication for protected routes
+  // Refresh session and get user
   const {
     data: { user },
   } = await supabase.auth.getUser();
