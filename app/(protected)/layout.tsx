@@ -1,12 +1,13 @@
 import { NavigationBar } from "@/components/NavigationBar";
-import { requireAuth } from "@/lib/auth";
 
 export default async function ProtectedLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  await requireAuth();
+  // Authentication is handled by middleware for Edge Runtime compatibility
+  // requireAuth() was removed because it uses cookies() from next/headers
+  // which is not available in Edge Runtime
 
   return (
     <div className="min-h-screen bg-background">
