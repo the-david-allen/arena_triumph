@@ -35,7 +35,10 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isProtectedRoute = pathname !== "/login" && pathname !== "/api/auth/callback" && !pathname.startsWith("/_next");
+  // Exclude Next.js internal routes from authentication
+  const isNextJsInternal = pathname.startsWith("/_next");
+  const isPublicRoute = pathname === "/login" || pathname === "/api/auth/callback";
+  const isProtectedRoute = !isNextJsInternal && !isPublicRoute;
   
   if (isProtectedRoute && !user) {
     const url = request.nextUrl.clone();
