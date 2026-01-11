@@ -1,91 +1,97 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
+import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
-  const supabase = createClient()
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const supabase = createClient();
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError(null)
+  async function handleSignIn(e: React.FormEvent) {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/api/auth/callback`,
-      },
-    })
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      setError(error.message)
-      setIsLoading(false)
-    } else {
-      router.push('/')
-      router.refresh()
+      if (signInError) {
+        setError(signInError.message);
+        setIsLoading(false);
+        return;
+      }
+
+      router.push("/");
+      router.refresh();
+    } catch (err) {
+      setError("An unexpected error occurred");
+      setIsLoading(false);
     }
   }
 
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError(null)
+  async function handleSignUp(e: React.FormEvent) {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    try {
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/api/auth/callback`,
+        },
+      });
 
-    if (error) {
-      setError(error.message)
-      setIsLoading(false)
-    } else {
-      router.push('/')
-      router.refresh()
+      if (signUpError) {
+        setError(signUpError.message);
+        setIsLoading(false);
+        return;
+      }
+
+      setError(null);
+      alert("Check your email for the confirmation link!");
+      setIsLoading(false);
+    } catch (err) {
+      setError("An unexpected error occurred");
+      setIsLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-      <Card className="w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-2 text-gray-900 dark:text-white">
-          Arena Triumph
-        </h1>
-        <p className="text-center text-gray-600 dark:text-gray-400 mb-6">
-          Enter your credentials to continue
-        </p>
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div className="w-full max-w-md space-y-8 rounded-lg border bg-card p-8 shadow-lg">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-foreground">Arena Triumph</h1>
+          <p className="mt-2 text-muted-foreground">Sign in to your account</p>
+        </div>
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-            {error}
-          </div>
-        )}
-
-        <form className="space-y-4">
+        <form className="space-y-6" onSubmit={handleSignIn}>
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              className="block text-sm font-medium text-foreground"
             >
-              Email
+              Email address
             </label>
             <input
               id="email"
+              name="email"
               type="email"
+              autoComplete="email"
+              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
               placeholder="you@example.com"
             />
           </div>
@@ -93,33 +99,40 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              className="block text-sm font-medium text-foreground"
             >
               Password
             </label>
             <input
               id="password"
+              name="password"
               type="password"
+              autoComplete="current-password"
+              required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
               placeholder="••••••••"
             />
           </div>
 
-          <div className="flex space-x-3">
+          {error && (
+            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+
+          <div className="flex gap-4">
             <Button
               type="submit"
-              onClick={handleSignIn}
               disabled={isLoading}
               className="flex-1"
             >
-              {isLoading ? 'Loading...' : 'Sign In'}
+              {isLoading ? "Signing in..." : "Sign In"}
             </Button>
             <Button
               type="button"
-              variant="secondary"
+              variant="outline"
               onClick={handleSignUp}
               disabled={isLoading}
               className="flex-1"
@@ -128,7 +141,7 @@ export default function LoginPage() {
             </Button>
           </div>
         </form>
-      </Card>
+      </div>
     </div>
-  )
+  );
 }

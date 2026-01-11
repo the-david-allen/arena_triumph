@@ -1,23 +1,23 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function InventoryPage() {
+export default function ChestpiecePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Manage Inventory</h1>
+        <h1 className="text-3xl font-bold text-foreground">Chestpiece</h1>
         <p className="mt-2 text-muted-foreground">
-          Organize and manage your equipment and items.
+          Browse and obtain chestpieces for your character.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Inventory Management</CardTitle>
-          <CardDescription>This page is a placeholder for future inventory functionality.</CardDescription>
+          <CardTitle>Chestpiece Selection</CardTitle>
+          <CardDescription>This page is a placeholder for future chestpiece functionality.</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
-            Inventory management features will be implemented here.
+            Chestpiece features will be implemented here.
           </p>
         </CardContent>
       </Card>
