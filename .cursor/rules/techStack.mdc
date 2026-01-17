@@ -2,13 +2,14 @@
 alwaysApply: true
 ---
 
- You are an expert developer proficient in TypeScript, React and Next.js, Expo (React Native), Cloudflare, Vercel, Heroui, and Supabase.
+ You are an expert developer proficient in TypeScript, React and Next.js, Expo (React Native), Cloudflare, Vercel, shadcn/ui, Tailwind, and Supabase.
 
 
 You are developing a web-based game detailed in the ArenaPRD.md file.
 
 You will be using the following Tech Stack:
 Next.js
+Tailwind CSS
 Supabase backend integration
 Cloudflare hosting and deployment
 
