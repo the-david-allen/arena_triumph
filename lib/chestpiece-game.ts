@@ -200,3 +200,97 @@ export async function updateTopScores(userId: string, score: number): Promise<vo
     // Don't throw - this is a non-critical operation
   }
 }
+
+/**
+ * Gets the reward rarity based on final score
+ * Queries chest_rewards_lookup to find the highest min_score <= finalScore
+ */
+export async function getRewardRarity(finalScore: number): Promise<string | null> {
+  const supabase = createClient();
+
+  try {
+    const { data, error } = await supabase
+      .from("chest_rewards_lookup")
+      .select("rarity")
+      .lte("min_score", finalScore)
+      .order("min_score", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error) {
+      // If no rows found (PGRST116), that's okay - score doesn't qualify
+      if (error.code === "PGRST116") {
+        return null;
+      }
+      console.error("Error fetching reward rarity:", error);
+      return null;
+    }
+
+    return data?.rarity || null;
+  } catch (error) {
+    console.error("Error in getRewardRarity:", error);
+    return null;
+  }
+}
+
+/**
+ * Gets a random chestpiece by rarity
+ * Queries chest_lookup and randomly selects one chestpiece
+ */
+export async function getRandomChestByRarity(rarity: string): Promise<{ id: string; name: string; image_url: string | null } | null> {
+  const supabase = createClient();
+
+  try {
+    const { data, error } = await supabase
+      .from("chest_lookup")
+      .select("id, name, image_url")
+      .eq("rarity", rarity);
+
+    if (error) {
+      console.error("Error fetching chestpieces by rarity:", error);
+      return null;
+    }
+
+    if (!data || data.length === 0) {
+      return null;
+    }
+
+    // Randomly select one chestpiece
+    const randomIndex = Math.floor(Math.random() * data.length);
+    const selected = data[randomIndex];
+
+    return {
+      id: selected.id,
+      name: selected.name,
+      image_url: selected.image_url,
+    };
+  } catch (error) {
+    console.error("Error in getRandomChestByRarity:", error);
+    return null;
+  }
+}
+
+/**
+ * Adds a chestpiece to the user's inventory
+ * Inserts into user_inventory table with gear_type "Chestpiece" and is_equipped false
+ */
+export async function addToInventory(userId: string, gearId: string): Promise<void> {
+  const supabase = createClient();
+
+  const { error } = await supabase.from("user_inventory").insert({
+    user_id: userId,
+    gear_id: gearId,
+    gear_type: "Chestpiece",
+    is_equipped: false,
+  });
+
+  if (error) {
+    // If duplicate key error, that's okay - user already has this item
+    if (error.code === "23505") {
+      console.log("Item already in inventory:", gearId);
+      return;
+    }
+    console.error("Error adding to inventory:", error);
+    throw new Error(`Failed to add to inventory: ${error.message}`);
+  }
+}

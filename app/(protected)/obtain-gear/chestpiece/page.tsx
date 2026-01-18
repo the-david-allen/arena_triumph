@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardData } from "@/components/chestpiece/Card";
 import { GameSlot } from "@/components/chestpiece/GameSlot";
-import { fetchChestGameCards, updatePlayCount, getCurrentUserId, updateTopScores } from "@/lib/chestpiece-game";
+import { fetchChestGameCards, updatePlayCount, getCurrentUserId, updateTopScores, getRewardRarity, getRandomChestByRarity, addToInventory } from "@/lib/chestpiece-game";
 import { cn } from "@/lib/utils";
 
 type SlotName =
@@ -70,12 +70,13 @@ export default function ChestpiecePage() {
   const [isGameActive, setIsGameActive] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [showRules, setShowRules] = React.useState(false);
-  const [showCompletion, setShowCompletion] = React.useState(false);
   const [finalScore, setFinalScore] = React.useState(0);
   const [highlightedLines, setHighlightedLines] = React.useState<Set<string>>(new Set());
   const [highlightedCards, setHighlightedCards] = React.useState<Set<string>>(new Set());
   const [slotBonusActive, setSlotBonusActive] = React.useState<Set<string>>(new Set());
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [showCompletionScreen, setShowCompletionScreen] = React.useState(false);
+  const [rewardChestpiece, setRewardChestpiece] = React.useState<{ id: string; name: string; image_url: string | null } | null>(null);
 
   // #region agent log
   React.useEffect(() => {
@@ -158,22 +159,36 @@ export default function ChestpiecePage() {
 
   const handleGameEnd = async (finalScore: number) => {
     setFinalScore(finalScore);
-    setShowCompletion(true);
     
-    // Update play count
+    // Pause for 2 seconds
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Lookup reward and update database
     try {
       const userId = await getCurrentUserId();
       if (userId) {
+        // Update play count (existing)
         await updatePlayCount(userId);
-        // Update top scores if score qualifies
+        
+        // Update top scores (existing)
         await updateTopScores(userId, finalScore);
+        
+        // Get reward based on score
+        const rarity = await getRewardRarity(finalScore);
+        if (rarity) {
+          const chestpiece = await getRandomChestByRarity(rarity);
+          if (chestpiece) {
+            await addToInventory(userId, chestpiece.id);
+            setRewardChestpiece(chestpiece);
+          }
+        }
       }
     } catch (error) {
-      console.error("Failed to update play count or top scores:", error);
+      console.error("Failed to process game end:", error);
     }
-
-    // Don't auto-reset - keep game visible until popup is closed
-    // Game will be reset when user closes the completion dialog
+    
+    // Replace game UI with completion screen
+    setShowCompletionScreen(true);
   };
 
   const handleDrawCard = () => {
@@ -331,6 +346,33 @@ export default function ChestpiecePage() {
     e.dataTransfer.dropEffect = "move";
   };
 
+  const handleResetGame = () => {
+    setShowCompletionScreen(false);
+    setRewardChestpiece(null);
+    setIsGameActive(false);
+    setCurrentScore(0);
+    setHighlightedLines(new Set());
+    setHighlightedCards(new Set());
+    setSlotBonusActive(new Set());
+    setDeck([]);
+    setCurrentCard(null);
+    setSlots({
+      Helm: null,
+      "Shoulder-Left": null,
+      "Shoulder-Right": null,
+      Chestpiece: null,
+      "Gauntlet-Left": null,
+      "Gauntlet-Right": null,
+      Belt: null,
+      "Legging-Left": null,
+      "Legging-Right": null,
+      "Boot-Left": null,
+      "Boot-Right": null,
+    });
+    setDiscardPile([]);
+    setFinalScore(0);
+  };
+
   const rulesText = `Click the top card of the deck to reveal the next card which you may play into a slot or drag to the Discard pile.  The game ends when all slots are filled or the deck is empty.
 
 Each card has a value that will add to your score.  It also has several possible bonuses:
@@ -342,6 +384,35 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
  11 Purple (highest value)
  22 Green (medium value)
  33 White (lowest value)`;
+
+  // Show completion screen if flag is set
+  if (showCompletionScreen) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-200 p-6">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center space-y-4">
+          <h2 className="text-3xl font-bold">Game Complete!</h2>
+          <p className="text-lg">Congratulations! You have completed the game.</p>
+          <div className="text-2xl font-bold">Final Score: {finalScore}</div>
+          {rewardChestpiece && (
+            <div className="pt-4 border-t">
+              <p className="text-sm text-gray-600 mb-2">You have been rewarded with:</p>
+              <p className="text-xl font-semibold text-primary mb-3">{rewardChestpiece.name}</p>
+              {rewardChestpiece.image_url && (
+                <div className="flex justify-center">
+                  <img 
+                    src={rewardChestpiece.image_url} 
+                    alt={rewardChestpiece.name}
+                    className="max-w-full h-auto max-h-64 rounded-lg shadow-md"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+          <Button onClick={handleResetGame} className="mt-4">Ok</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 p-6 min-h-screen bg-gray-200">
@@ -683,45 +754,6 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
         </DialogContent>
       </Dialog>
 
-      {/* Completion Dialog */}
-      <Dialog open={showCompletion} onOpenChange={(open) => {
-        setShowCompletion(open);
-        // Reset game when dialog is closed
-        if (!open) {
-          setIsGameActive(false);
-          setCurrentScore(0);
-          setHighlightedLines(new Set());
-          setHighlightedCards(new Set());
-          setSlotBonusActive(new Set());
-          setDeck([]);
-          setCurrentCard(null);
-          setSlots({
-            Helm: null,
-            "Shoulder-Left": null,
-            "Shoulder-Right": null,
-            Chestpiece: null,
-            "Gauntlet-Left": null,
-            "Gauntlet-Right": null,
-            Belt: null,
-            "Legging-Left": null,
-            "Legging-Right": null,
-            "Boot-Left": null,
-            "Boot-Right": null,
-          });
-          setDiscardPile([]);
-        }
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Game Complete!</DialogTitle>
-            <DialogDescription>
-              Congratulations! You have completed the game.
-              <br />
-              <strong className="text-lg">Final Score: {finalScore}</strong>
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
