@@ -24,3 +24,8 @@ dist/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Image files
+Images/chest_game_layout.jpeg
+Images/chest_game_card.jpeg
+Images/helm_game_layout.jpeg
