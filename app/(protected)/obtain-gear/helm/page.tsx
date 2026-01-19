@@ -34,9 +34,9 @@ const SLOT_IMAGE_MAP: Record<SlotName, string> = {
 
 const CDN_BASE_URL = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/helm_game";
 
-const ENCUMBERANCE_VALUE = -10;
+const ENCUMBERANCE_VALUE = -8;
 const INITIAL_STRIKES = 10;
-const INITIAL_ROWS_PER_COLUMN = 10;
+const INITIAL_ROWS_PER_COLUMN = 6;
 
 interface DiceRoll {
   numbered: [number, number]; // 2 numbered dice (1-6)
@@ -56,10 +56,13 @@ export default function HelmPage() {
   const [selectedNumberedDieIndex, setSelectedNumberedDieIndex] = React.useState<number | null>(null);
   const [selectedSlotDieIndex, setSelectedSlotDieIndex] = React.useState<number | null>(null);
   const [diceRotations, setDiceRotations] = React.useState<[number, number, number, number]>([0, 0, 0, 0]);
+  const [highlightedColumns, setHighlightedColumns] = React.useState<Set<number>>(new Set());
+  const [greyColumns, setGreyColumns] = React.useState<Set<number>>(new Set());
   const [showRules, setShowRules] = React.useState(false);
   const [showCompletionScreen, setShowCompletionScreen] = React.useState(false);
   const [rewardHelm, setRewardHelm] = React.useState<{ id: string; name: string; image_url: string | null } | null>(null);
   const [finalScore, setFinalScore] = React.useState(0);
+  const [isGameEnding, setIsGameEnding] = React.useState(false);
 
   // Calculate total score whenever strength or encumberance changes
   React.useEffect(() => {
@@ -83,6 +86,32 @@ export default function HelmPage() {
       slot: [slot1, slot2],
     });
     setDiceRotations([rotation1, rotation2, rotation3, rotation4]);
+    
+    // Highlight columns that match the slot dice only if at least one numeric die can be placed
+    const highlightableColumns = new Set<number>();
+    const slot1Index = SLOT_ORDER.indexOf(slot1);
+    const slot2Index = SLOT_ORDER.indexOf(slot2);
+    
+    // Check if slot1 column can accept any numeric die
+    const slot1LowestCell = findLowestAvailableCell(slot1Index);
+    if (slot1LowestCell !== null) {
+      const slot1HighestValue = getHighestValueInColumn(slot1Index);
+      if (numbered1 > slot1HighestValue || numbered2 > slot1HighestValue) {
+        highlightableColumns.add(slot1Index);
+      }
+    }
+    
+    // Check if slot2 column can accept any numeric die
+    const slot2LowestCell = findLowestAvailableCell(slot2Index);
+    if (slot2LowestCell !== null) {
+      const slot2HighestValue = getHighestValueInColumn(slot2Index);
+      if (numbered1 > slot2HighestValue || numbered2 > slot2HighestValue) {
+        highlightableColumns.add(slot2Index);
+      }
+    }
+    
+    setHighlightedColumns(highlightableColumns);
+    
     setSelectedNumberedDieIndex(null);
     setSelectedSlotDieIndex(null);
   };
@@ -97,10 +126,13 @@ export default function HelmPage() {
     setGrid(Array(6).fill(null).map(() => Array(INITIAL_ROWS_PER_COLUMN).fill(null)));
     setDiceRoll(null);
     setDiceRotations([0, 0, 0, 0]);
+    setHighlightedColumns(new Set());
+    setGreyColumns(new Set());
     setSelectedNumberedDieIndex(null);
     setSelectedSlotDieIndex(null);
     setShowCompletionScreen(false);
     setRewardHelm(null);
+    setIsGameEnding(false);
   };
 
   const getColumnIndex = (slot: SlotName): number => {
@@ -133,6 +165,19 @@ export default function HelmPage() {
     return grid[columnIndex].some((value) => value !== null);
   };
 
+  const hasSixInColumn = (columnIndex: number, gridToCheck: (number | null)[][]): boolean => {
+    return gridToCheck[columnIndex].some((value) => value === 6);
+  };
+
+  const allColumnsHaveSix = (gridToCheck: (number | null)[][]): boolean => {
+    for (let i = 0; i < 6; i++) {
+      if (!hasSixInColumn(i, gridToCheck)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
   const handlePlaceValue = () => {
     if (selectedNumberedDieIndex === null || selectedSlotDieIndex === null || !diceRoll) {
       return;
@@ -148,8 +193,8 @@ export default function HelmPage() {
     }
 
     const highestValue = getHighestValueInColumn(columnIndex);
-    if (selectedValue < highestValue) {
-      return; // Value too low
+    if (selectedValue <= highestValue) {
+      return; // Value must be greater than highest value
     }
 
     // Check if this is the first value in the column (before updating)
@@ -160,12 +205,6 @@ export default function HelmPage() {
       if (colIdx === columnIndex) {
         const newCol = [...col];
         newCol[lowestCell] = selectedValue;
-        
-        // If we placed in the top row (index 0), add a new row at the top
-        if (lowestCell === 0) {
-          newCol.unshift(null);
-        }
-        
         return newCol;
       }
       return col;
@@ -181,10 +220,24 @@ export default function HelmPage() {
       setEncumberance((prev) => prev + ENCUMBERANCE_VALUE);
     }
 
+    // If a 6 was placed, mark the column as grey
+    if (selectedValue === 6) {
+      setGreyColumns((prev) => new Set(prev).add(columnIndex));
+    }
+
+    // Check if all columns have a 6 value - if so, trigger endgame
+    if (allColumnsHaveSix(newGrid)) {
+      setIsGameEnding(true);
+      handleGameEnd();
+      // Don't clear dice/selections since game is ending
+      return;
+    }
+
     // Clear selections and dice
     setSelectedNumberedDieIndex(null);
     setSelectedSlotDieIndex(null);
     setDiceRoll(null);
+    setHighlightedColumns(new Set());
   };
 
   const canPlaceAnyValue = (): boolean => {
@@ -200,7 +253,7 @@ export default function HelmPage() {
       
       // Check if any numbered die can be placed
       for (const numberedValue of diceRoll.numbered) {
-        if (numberedValue >= highestValue) {
+        if (numberedValue > highestValue) {
           return true;
         }
       }
@@ -215,8 +268,10 @@ export default function HelmPage() {
     setSelectedNumberedDieIndex(null);
     setSelectedSlotDieIndex(null);
     setDiceRoll(null);
+    setHighlightedColumns(new Set());
 
     if (newStrikes === 0) {
+      setIsGameEnding(true);
       await handleGameEnd();
     }
   };
@@ -269,8 +324,11 @@ export default function HelmPage() {
     setGrid(Array(6).fill(null).map(() => Array(INITIAL_ROWS_PER_COLUMN).fill(null)));
     setDiceRoll(null);
     setDiceRotations([0, 0, 0, 0]);
+    setHighlightedColumns(new Set());
+    setGreyColumns(new Set());
     setSelectedNumberedDieIndex(null);
     setSelectedSlotDieIndex(null);
+    setIsGameEnding(false);
   };
 
   const canPlaceSelected = (): boolean => {
@@ -288,7 +346,7 @@ export default function HelmPage() {
     }
 
     const highestValue = getHighestValueInColumn(columnIndex);
-    return selectedValue >= highestValue;
+    return selectedValue > highestValue;
   };
 
   const rulesText = `Roll 4 dice:  2 standard and 2 that have faces corresponding to the equipment slots for the grid columns.  Each roll, you select 1 of each type of die (1 numerical, 1 slot) and place the numerical value into the lowest open cell in that slot column.  But watch out, you may only place values that are at least as large as the highest value already in the column.  If you find yourself without a good move (or without any move), push the Strike button to end you turn and prepare to roll again.  However, you only get 10 Strikes before the game ends.
@@ -367,7 +425,7 @@ Also, each piece of equipment you use (meaning you have 1 or more cells filled i
           {/* Dice Area */}
           {!diceRoll && (
             <div className="flex justify-center">
-              <Button onClick={rollDice} size="lg">
+              <Button onClick={rollDice} size="lg" disabled={isGameEnding}>
                 Roll
               </Button>
             </div>
@@ -446,37 +504,54 @@ Also, each piece of equipment you use (meaning you have 1 or more cells filled i
           {/* Grid */}
           <div className="border-2 border-gray-800 rounded-lg p-4 bg-white">
             <div className="grid grid-cols-6 gap-2">
-              {SLOT_ORDER.map((slot, columnIndex) => (
-                <div key={slot} className="flex flex-col">
-                  {/* Column cells - render from top to bottom */}
-                  <div className="flex flex-col gap-1 mb-2">
-                    {grid[columnIndex].map((value, rowIndex) => (
-                      <div
-                        key={rowIndex}
-                        className={cn(
-                          "w-full h-12 border-2 rounded flex items-center justify-center font-bold text-lg",
-                          value !== null
-                            ? "border-gray-600 bg-gray-100"
-                            : "border-gray-300 bg-gray-50"
-                        )}
-                      >
-                        {value !== null ? value : ""}
-                      </div>
-                    ))}
+              {SLOT_ORDER.map((slot, columnIndex) => {
+                const isHighlighted = highlightedColumns.has(columnIndex);
+                const isGrey = greyColumns.has(columnIndex);
+                
+                return (
+                  <div 
+                    key={slot} 
+                    className={cn(
+                      "flex flex-col rounded-lg transition-all",
+                      isGrey && "bg-gray-300 p-2",
+                      isHighlighted && !isGrey && "bg-yellow-200 p-2 ring-2 ring-yellow-400"
+                    )}
+                  >
+                    {/* Column cells - render from top to bottom */}
+                    <div className="flex flex-col gap-1 mb-2">
+                      {grid[columnIndex].map((value, rowIndex) => (
+                        <div
+                          key={rowIndex}
+                          className={cn(
+                            "w-full h-12 border-2 rounded flex items-center justify-center font-bold text-lg",
+                            value !== null
+                              ? "border-gray-600 bg-gray-100"
+                              : "border-gray-300 bg-gray-50"
+                          )}
+                        >
+                          {value !== null ? value : ""}
+                        </div>
+                      ))}
+                    </div>
+                    {/* Column header image at bottom */}
+                    <div className="flex justify-center items-center gap-2 h-16 border-t-2 border-gray-400 pt-2">
+                      {hasValueInColumn(columnIndex) && (
+                        <span className="text-xs text-gray-600 font-semibold">
+                          {ENCUMBERANCE_VALUE}
+                        </span>
+                      )}
+                      <Image
+                        src={`${CDN_BASE_URL}/${SLOT_IMAGE_MAP[slot]}`}
+                        alt={slot}
+                        width={64}
+                        height={64}
+                        className="object-contain"
+                        unoptimized
+                      />
+                    </div>
                   </div>
-                  {/* Column header image at bottom */}
-                  <div className="flex justify-center items-center h-16 border-t-2 border-gray-400 pt-2">
-                    <Image
-                      src={`${CDN_BASE_URL}/${SLOT_IMAGE_MAP[slot]}`}
-                      alt={slot}
-                      width={64}
-                      height={64}
-                      className="object-contain"
-                      unoptimized
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
