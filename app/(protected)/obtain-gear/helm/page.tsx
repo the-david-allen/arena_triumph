@@ -24,15 +24,15 @@ const SLOT_ORDER = ["Helm", "Chest", "Gauntlets", "Leggings", "Boots", "Weapon"]
 type SlotName = typeof SLOT_ORDER[number];
 
 const SLOT_IMAGE_MAP: Record<SlotName, string> = {
-  Helm: "helm_face.jpg",
-  Chest: "chest_face.jpg",
-  Gauntlets: "gauntlets_face.png",
-  Leggings: "leggings_face.png",
-  Boots: "boots_face.png",
-  Weapon: "weapon_face.jpg",
+  Helm: "helm.jpg",
+  Chest: "chestpiece.jpg",
+  Gauntlets: "gauntlets.jpg",
+  Leggings: "leggings.jpg",
+  Boots: "boots.jpg",
+  Weapon: "weapon.jpg",
 };
 
-const CDN_BASE_URL = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/helm_game";
+const CDN_BASE_URL = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/slots";
 
 const ENCUMBERANCE_VALUE = -8;
 const INITIAL_STRIKES = 10;
