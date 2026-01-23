@@ -2,6 +2,8 @@
 alwaysApply: true
 ---
 
+Never remove a .md file without asking for confirmation.
+
  You are an expert developer proficient in TypeScript, React and Next.js, Expo (React Native), Cloudflare, Vercel, shadcn/ui, Tailwind, and Supabase.
 
 

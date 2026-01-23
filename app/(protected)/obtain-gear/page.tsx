@@ -1,18 +1,21 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 export const runtime = "edge";
 
+const CDN_BASE_URL = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/slots";
+
 const gearTypes = [
-  { name: "Helm", href: "/obtain-gear/helm", icon: "🪖" },
-  { name: "Chestpiece", href: "/obtain-gear/chestpiece", icon: "🛡️" },
-  { name: "Boots", href: "/obtain-gear/boots", icon: "👢" },
-  { name: "Gauntlets", href: "/obtain-gear/gauntlets", icon: "🧤" },
-  { name: "Leggings", href: "/obtain-gear/leggings", icon: "👖" },
-  { name: "Belt", href: "/obtain-gear/belt", icon: "⛓️" },
-  { name: "Shoulders", href: "/obtain-gear/shoulders", icon: "🎯" },
-  { name: "Weapon", href: "/obtain-gear/weapon", icon: "⚔️" },
+  { name: "Helm", href: "/obtain-gear/helm", image: "helm.jpg" },
+  { name: "Chestpiece", href: "/obtain-gear/chestpiece", image: "chestpiece.jpg" },
+  { name: "Boots", href: "/obtain-gear/boots", image: "boots.jpg" },
+  { name: "Gauntlets", href: "/obtain-gear/gauntlets", image: "gauntlets.jpg" },
+  { name: "Leggings", href: "/obtain-gear/leggings", image: "leggings.jpg" },
+  { name: "Belt", href: "/obtain-gear/belt", image: "belt.jpg" },
+  { name: "Shoulders", href: "/obtain-gear/shoulders", image: "shoulders.jpg" },
+  { name: "Weapon", href: "/obtain-gear/weapon", image: "weapon.jpg" },
 ];
 
 export default function ObtainGearPage() {
@@ -30,7 +33,16 @@ export default function ObtainGearPage() {
           <Link key={gear.href} href={gear.href}>
             <Card className="transition-all hover:shadow-lg hover:scale-105 cursor-pointer h-full">
               <CardHeader className="text-center">
-                <div className="text-4xl mb-2">{gear.icon}</div>
+                <div className="flex justify-center mb-2">
+                  <Image
+                    src={`${CDN_BASE_URL}/${gear.image}`}
+                    alt={gear.name}
+                    width={128}
+                    height={128}
+                    className="object-contain"
+                    unoptimized
+                  />
+                </div>
                 <CardTitle className="text-lg">{gear.name}</CardTitle>
               </CardHeader>
               <CardContent>
