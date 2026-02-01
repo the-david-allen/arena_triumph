@@ -1,7 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const runtime = "edge";
-
 export default function MainPage() {
   return (
     <div className="space-y-6">
