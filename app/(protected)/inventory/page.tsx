@@ -66,8 +66,11 @@ export default function InventoryPage() {
     let cancelled = false;
     async function init() {
       setIsLoading(true);
-      await loadEquippedItems();
-      if (!cancelled) setIsLoading(false);
+      try {
+        await loadEquippedItems();
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
     }
     init();
     return () => {
@@ -164,9 +167,9 @@ export default function InventoryPage() {
 
       <div className="flex flex-col gap-6 lg:flex-row">
         {/* Left column: Slot list + Equipped */}
-        <div className="w-full shrink-0 lg:w-[200px]">
+        <div className="w-full shrink-0 lg:w-[260px]">
           <div className="rounded-lg border bg-card shadow-sm">
-            <div className="grid grid-cols-2 gap-2 border-b px-3 py-2 font-semibold">
+            <div className="grid grid-cols-2 gap-3 border-b px-4 py-2 font-semibold">
               <span>Slot</span>
               <span className="text-right">Equipped</span>
             </div>
@@ -178,7 +181,7 @@ export default function InventoryPage() {
                   <div
                     key={slot.type}
                     className={cn(
-                      "grid grid-cols-2 gap-2 px-3 py-2 transition-colors",
+                      "grid grid-cols-2 gap-3 px-4 py-3 transition-colors",
                       isSelected && "bg-primary/10"
                     )}
                   >
@@ -187,7 +190,7 @@ export default function InventoryPage() {
                       onClick={() => handleSlotClick(slot.type)}
                       title={slot.displayName}
                       className={cn(
-                        "flex items-center justify-center rounded-md border p-2 transition-colors hover:bg-accent",
+                        "flex items-center justify-center rounded-md border p-3 transition-colors hover:bg-accent",
                         isSelected
                           ? "border-primary font-bold ring-2 ring-primary"
                           : "border-transparent"
@@ -196,8 +199,8 @@ export default function InventoryPage() {
                       <Image
                         src={getSlotIconUrl(slot.icon)}
                         alt={slot.displayName}
-                        width={32}
-                        height={32}
+                        width={48}
+                        height={48}
                         className="object-contain"
                         unoptimized
                       />
@@ -208,7 +211,7 @@ export default function InventoryPage() {
                         onClick={() => equipped && handleGridItemClick(equipped)}
                         disabled={!equipped}
                         className={cn(
-                          "h-12 w-12 shrink-0 rounded border flex items-center justify-center overflow-hidden transition-colors hover:bg-accent disabled:pointer-events-none",
+                          "h-16 w-16 shrink-0 rounded border flex items-center justify-center overflow-hidden transition-colors hover:bg-accent disabled:pointer-events-none",
                           selectedInventoryItem?.gear_id === equipped?.gear_id
                             ? "ring-2 ring-primary"
                             : "bg-muted/50"
@@ -218,8 +221,8 @@ export default function InventoryPage() {
                           <Image
                             src={equipped.details.image_url}
                             alt={equipped.details.name}
-                            width={48}
-                            height={48}
+                            width={64}
+                            height={64}
                             className="h-full w-full object-contain"
                             unoptimized
                           />
@@ -237,7 +240,7 @@ export default function InventoryPage() {
         <div className="flex flex-1 flex-col gap-6">
           {/* Top: Item details + Equip/Discard */}
           <div className="flex flex-col gap-4 rounded-lg border bg-card p-4 shadow-sm sm:flex-row">
-            <div className="flex flex-1 flex-col gap-3">
+            <div className="flex flex-1 flex-row items-start gap-4">
               <div className="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted/50">
                 {selectedInventoryItem?.details?.image_url ? (
                   <Image
@@ -254,7 +257,7 @@ export default function InventoryPage() {
                   </span>
                 )}
               </div>
-              <div className="space-y-1">
+              <div className="flex flex-1 flex-col gap-1 pt-0">
                 <p className="font-medium">
                   {selectedInventoryItem?.details?.name ? (
                     <>
