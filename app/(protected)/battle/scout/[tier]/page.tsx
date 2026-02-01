@@ -2,6 +2,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+export const runtime = "edge";
+
 interface ScoutPageProps {
   params: Promise<{ tier: string }>;
 }
