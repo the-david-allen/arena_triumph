@@ -169,7 +169,7 @@ export default function InventoryPage() {
         {/* Left column: Slot list + Equipped */}
         <div className="w-full shrink-0 lg:w-[260px]">
           <div className="rounded-lg border bg-card shadow-sm">
-            <div className="grid grid-cols-2 gap-3 border-b px-4 py-2 font-semibold">
+            <div className="grid grid-cols-2 gap-2 border-b px-3 py-1.5 font-semibold">
               <span>Slot</span>
               <span className="text-right">Equipped</span>
             </div>
@@ -181,7 +181,7 @@ export default function InventoryPage() {
                   <div
                     key={slot.type}
                     className={cn(
-                      "grid grid-cols-2 gap-3 px-4 py-3 transition-colors",
+                      "grid grid-cols-2 gap-2 px-3 py-1.5 transition-colors",
                       isSelected && "bg-primary/10"
                     )}
                   >
@@ -190,7 +190,7 @@ export default function InventoryPage() {
                       onClick={() => handleSlotClick(slot.type)}
                       title={slot.displayName}
                       className={cn(
-                        "flex items-center justify-center rounded-md border p-3 transition-colors hover:bg-accent",
+                        "flex items-center justify-center rounded-md border p-2 transition-colors hover:bg-accent",
                         isSelected
                           ? "border-primary font-bold ring-2 ring-primary"
                           : "border-transparent"
@@ -199,8 +199,8 @@ export default function InventoryPage() {
                       <Image
                         src={getSlotIconUrl(slot.icon)}
                         alt={slot.displayName}
-                        width={48}
-                        height={48}
+                        width={64}
+                        height={64}
                         className="object-contain"
                         unoptimized
                       />
