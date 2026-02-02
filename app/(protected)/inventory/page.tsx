@@ -96,6 +96,7 @@ export default function InventoryPage() {
     if (!selectedInventoryItem) return;
     const userId = await getCurrentUserId();
     if (!userId) return;
+    const equippedGearId = selectedInventoryItem.gear_id;
     setIsActionLoading(true);
     try {
       await equipItem(
@@ -104,12 +105,18 @@ export default function InventoryPage() {
         selectedInventoryItem.gear_type
       );
       await loadEquippedItems();
+      if (selectedSlot) {
+        const items = await loadInventoryForSlot(selectedSlot);
+        setInventoryItems(items);
+        const updated = items.find((i) => i.gear_id === equippedGearId);
+        if (updated) setSelectedInventoryItem(updated);
+      }
     } catch (err) {
       console.error("Failed to equip:", err);
     } finally {
       setIsActionLoading(false);
     }
-  }, [selectedInventoryItem, loadEquippedItems]);
+  }, [selectedInventoryItem, selectedSlot, loadEquippedItems, loadInventoryForSlot]);
 
   const handleDiscardClick = React.useCallback(() => {
     if (!selectedInventoryItem) return;

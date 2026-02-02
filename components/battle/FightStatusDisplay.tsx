@@ -1,7 +1,6 @@
 "use client";
 
 import { HitBar, type ZoneType } from "./HitBar";
-import { cn } from "@/lib/utils";
 
 interface FightStatusDisplayProps {
   statusText: string;
@@ -23,11 +22,9 @@ export function FightStatusDisplay({
         >
           {statusText}
         </p>
-        {showHitBar && (
-          <div className="max-w-md mx-auto w-full">
-            <HitBar isActive={showHitBar} onComplete={onHitBarComplete} />
-          </div>
-        )}
+        <div className="max-w-md mx-auto w-full min-h-12">
+          <HitBar isActive={showHitBar} onComplete={onHitBarComplete} />
+        </div>
       </div>
     </div>
   );

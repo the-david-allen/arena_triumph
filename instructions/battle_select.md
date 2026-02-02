@@ -14,7 +14,7 @@ Upon loading the page, perform the following:
 - For each boss tile, look up the has_fought value in the user_daily_status table for this user.  If true, disable the tile and display a large X in the tile.
 
 If the user selects an active tile, perform the following:
-- Check to see if the Scout button for that tier is enabled.  If so, display a Yes/No popup confirmation with "Are you sure you want to battle without scouting?"  If No is selected, the popup is closed and no further action.  If Yes is selected, bring up the Battle page (currently a placeholder) for that tier.
+- Check to see if the Scout button for that tier is enabled.  If so, display a Yes/No popup confirmation with "Are you sure you want to battle without scouting?"  If No is selected, the popup is closed and no further action.  If Yes is selected, bring up the Battle page detailed at instructions/battle.md passing in the boss tier.
 
 If the user presses a Scout button, bring up the Scout page for that tier (currently a placeholder).
 
