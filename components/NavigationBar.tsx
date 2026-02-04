@@ -12,7 +12,6 @@ const navigationItems = [
   { name: "Obtain Gear", href: "/obtain-gear" },
   { name: "Manage Inventory", href: "/inventory" },
   { name: "Inspect", href: "/inspect" },
-  { name: "Settings", href: "/settings" },
 ];
 
 export function NavigationBar() {

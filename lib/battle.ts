@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { fetchAffinityMatchups } from "@/lib/leggings-game";
+import { checkAndUpdateLevel } from "@/lib/levels";
 
 const GEAR_TYPE_TO_LOOKUP_TABLE: Record<string, string> = {
   Weapon: "weapons_lookup",
@@ -293,18 +294,22 @@ export async function updateHasFought(
   }
 }
 
+export interface AwardVictoryXPResult {
+  leveledUp: boolean;
+}
+
 export async function awardVictoryXP(
   userId: string,
   tier: number
-): Promise<void> {
+): Promise<AwardVictoryXPResult> {
   const xp = TIER_XP[tier] ?? 0;
-  if (xp <= 0) return;
+  if (xp <= 0) return { leveledUp: false };
 
   const supabase = createClient();
 
   const { data: profile, error: fetchError } = await supabase
     .from("user_profiles")
-    .select("xp")
+    .select("xp, level")
     .eq("id", userId)
     .single();
 
@@ -314,6 +319,7 @@ export async function awardVictoryXP(
   }
 
   const newXp = (profile.xp ?? 0) + xp;
+  const currentLevel = profile.level ?? 1;
 
   const { error: updateError } = await supabase
     .from("user_profiles")
@@ -324,4 +330,13 @@ export async function awardVictoryXP(
     console.error("Error updating XP:", updateError);
     throw new Error(`Failed to award XP: ${updateError.message}`);
   }
+
+  const { leveledUp } = await checkAndUpdateLevel(
+    supabase,
+    userId,
+    newXp,
+    currentLevel
+  );
+
+  return { leveledUp };
 }

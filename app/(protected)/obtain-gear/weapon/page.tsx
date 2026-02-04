@@ -17,8 +17,10 @@ import {
   getRandomWeaponByRarity,
   addToInventory,
 } from "@/lib/weapon-game";
+import { getTodayPlayCountForGear } from "@/lib/playcount";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 const COLUMNS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 const CDN_BASE_URL = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/slots";
@@ -88,6 +90,20 @@ export default function WeaponPage() {
   const [draggedDieIndex, setDraggedDieIndex] = React.useState<number | null>(null);
   const [placeJustClicked, setPlaceJustClicked] = React.useState(false);
   const [rollJustClicked, setRollJustClicked] = React.useState(false);
+  const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    getCurrentUserId().then((userId) => {
+      if (!userId || cancelled) return;
+      getTodayPlayCountForGear(userId, "Weapon").then((count) => {
+        if (!cancelled) setTodayPlayCount(count);
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Helper function to get column index from dice sum
   const getColumnIndex = (sum: number): number | null => {
@@ -512,9 +528,6 @@ export default function WeaponPage() {
         return;
       }
 
-      // Update play count
-      await updatePlayCount(userId);
-
       // Update top scores
       await updateTopScores(userId, finalTurnsValue);
 
@@ -551,7 +564,12 @@ export default function WeaponPage() {
   };
 
   // Handle Play Game button
-  const handlePlayGame = () => {
+  const handlePlayGame = async () => {
+    const userId = await getCurrentUserId();
+    if (userId) {
+      await updatePlayCount(userId);
+      setTodayPlayCount((prev) => (prev !== null ? prev + 1 : null));
+    }
     setIsGameActive(true);
     setTurnsTaken(0);
     setRolledDice([]);
@@ -620,7 +638,7 @@ export default function WeaponPage() {
               )}
             </div>
           )}
-          <Button onClick={handleResetGame} className="mt-4">
+          <Button onClick={() => router.push("/obtain-gear")} className="mt-4">
             Ok
           </Button>
         </div>
@@ -632,8 +650,16 @@ export default function WeaponPage() {
     <div className="space-y-6 p-6 min-h-screen bg-gray-200">
       {/* Header with buttons */}
       <div className="flex justify-between items-center">
-        <Button onClick={handlePlayGame} disabled={isGameActive}>
-          Play Game
+        <Button
+          onClick={() => void handlePlayGame()}
+          disabled={
+            isGameActive ||
+            (todayPlayCount !== null && todayPlayCount >= 3)
+          }
+        >
+          {todayPlayCount !== null && todayPlayCount >= 3
+            ? "No plays remaining today"
+            : "Play Game"}
         </Button>
         <Button variant="outline" onClick={() => setShowRules(true)}>
           Rules

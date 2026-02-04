@@ -17,8 +17,10 @@ import {
   getRandomHelmByRarity,
   addToInventory,
 } from "@/lib/helm-game";
+import { getTodayPlayCountForGear } from "@/lib/playcount";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 const SLOT_ORDER = ["Helm", "Chest", "Gauntlets", "Leggings", "Boots", "Weapon"] as const;
 type SlotName = typeof SLOT_ORDER[number];
@@ -44,6 +46,7 @@ interface DiceRoll {
 }
 
 export default function HelmPage() {
+  const router = useRouter();
   const [isGameActive, setIsGameActive] = React.useState(false);
   const [strength, setStrength] = React.useState(0);
   const [encumberance, setEncumberance] = React.useState(0);
@@ -63,6 +66,20 @@ export default function HelmPage() {
   const [rewardHelm, setRewardHelm] = React.useState<{ id: string; name: string; image_url: string | null } | null>(null);
   const [finalScore, setFinalScore] = React.useState(0);
   const [isGameEnding, setIsGameEnding] = React.useState(false);
+  const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    getCurrentUserId().then((userId) => {
+      if (!userId || cancelled) return;
+      getTodayPlayCountForGear(userId, "Helm").then((count) => {
+        if (!cancelled) setTodayPlayCount(count);
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Calculate total score whenever strength or encumberance changes
   React.useEffect(() => {
@@ -116,7 +133,12 @@ export default function HelmPage() {
     setSelectedSlotDieIndex(null);
   };
 
-  const handlePlayGame = () => {
+  const handlePlayGame = async () => {
+    const userId = await getCurrentUserId();
+    if (userId) {
+      await updatePlayCount(userId);
+      setTodayPlayCount((prev) => (prev !== null ? prev + 1 : null));
+    }
     setIsGameActive(true);
     setStrength(0);
     setEncumberance(0);
@@ -287,9 +309,6 @@ export default function HelmPage() {
     try {
       const userId = await getCurrentUserId();
       if (userId) {
-        // Update play count
-        await updatePlayCount(userId);
-
         // Update top scores
         await updateTopScores(userId, score);
 
@@ -379,7 +398,7 @@ Also, each piece of equipment you use (meaning you have 1 or more cells filled i
               )}
             </div>
           )}
-          <Button onClick={handleResetGame} className="mt-4">
+          <Button onClick={() => router.push("/obtain-gear")} className="mt-4">
             Ok
           </Button>
         </div>
@@ -391,8 +410,16 @@ Also, each piece of equipment you use (meaning you have 1 or more cells filled i
     <div className="space-y-6 p-6 min-h-screen bg-gray-200">
       {/* Header with buttons */}
       <div className="flex justify-between items-center">
-        <Button onClick={handlePlayGame} disabled={isGameActive}>
-          Play Game
+        <Button
+          onClick={() => void handlePlayGame()}
+          disabled={
+            isGameActive ||
+            (todayPlayCount !== null && todayPlayCount >= 3)
+          }
+        >
+          {todayPlayCount !== null && todayPlayCount >= 3
+            ? "No plays remaining today"
+            : "Play Game"}
         </Button>
         <Button variant="outline" onClick={() => setShowRules(true)}>
           Rules

@@ -1,35 +1,89 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+"use client";
+
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { PreLandingPage } from "@/components/PreLandingPage";
+import { MainLandingPage } from "@/components/MainLandingPage";
+
+interface UserProfile {
+  id: string;
+  username: string | null;
+  user_email: string | null;
+}
 
 export default function MainPage() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Welcome to Arena Triumph</h1>
-        <p className="mt-2 text-muted-foreground">
-          Your adventure begins here. Choose your path from the navigation above.
-        </p>
-      </div>
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [needsSetup, setNeedsSetup] = useState(false);
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Battle</CardTitle>
-            <CardDescription>Engage in combat and test your skills</CardDescription>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Obtain Gear</CardTitle>
-            <CardDescription>Acquire new equipment for your character</CardDescription>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Manage Inventory</CardTitle>
-            <CardDescription>Organize and manage your items</CardDescription>
-          </CardHeader>
-        </Card>
+  useEffect(() => {
+    async function loadUserProfile() {
+      const supabase = createClient();
+
+      // Get current user
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch user profile
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("id, username, user_email")
+        .eq("id", user.id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching user profile:", error);
+        setIsLoading(false);
+        return;
+      }
+
+      setUserProfile(data);
+      
+      // Check if username equals email (needs setup)
+      setNeedsSetup(data.username === data.user_email);
+      setIsLoading(false);
+    }
+
+    loadUserProfile();
+  }, []);
+
+  function handleProfileComplete() {
+    // Reload the page to show the main landing page
+    window.location.reload();
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-lg text-muted-foreground">Loading...</div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  if (!userProfile) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-lg text-muted-foreground">
+          Error loading profile. Please try refreshing the page.
+        </div>
+      </div>
+    );
+  }
+
+  if (needsSetup) {
+    return (
+      <PreLandingPage
+        userId={userProfile.id}
+        onProfileComplete={handleProfileComplete}
+      />
+    );
+  }
+
+  return <MainLandingPage />;
 }

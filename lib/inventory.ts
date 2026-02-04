@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { checkAndUpdateLevel } from "@/lib/levels";
 
 const CDN_BASE_URL = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev";
 
@@ -26,12 +27,12 @@ const GEAR_TYPE_TO_LOOKUP_TABLE: Record<string, string> = {
 
 export const RARITY_XP: Record<string, number> = {
   Base: 1,
-  Common: 5,
-  Uncommon: 10,
-  Rare: 15,
-  Epic: 20,
-  Legendary: 25,
-  Mythic: 30,
+  Common: 2,
+  Uncommon: 3,
+  Rare: 4,
+  Epic: 5,
+  Legendary: 10,
+  Mythic: 15,
 };
 
 export function getSlotIconUrl(iconFilename: string): string {
@@ -231,6 +232,10 @@ export async function equipItem(
   }
 }
 
+export interface DiscardItemResult {
+  leveledUp: boolean;
+}
+
 /**
  * Discards an item: deletes from user_inventory and increments user XP
  */
@@ -238,7 +243,7 @@ export async function discardItem(
   userId: string,
   gearId: string,
   xpVal: number
-): Promise<void> {
+): Promise<DiscardItemResult> {
   const supabase = createClient();
 
   const { error: deleteError } = await supabase
@@ -254,7 +259,7 @@ export async function discardItem(
 
   const { data: profile, error: fetchError } = await supabase
     .from("user_profiles")
-    .select("xp")
+    .select("xp, level")
     .eq("id", userId)
     .single();
 
@@ -264,6 +269,8 @@ export async function discardItem(
   }
 
   const newXp = (profile.xp ?? 0) + xpVal;
+  const currentLevel = profile.level ?? 1;
+
   const { error: updateError } = await supabase
     .from("user_profiles")
     .update({ xp: newXp })
@@ -273,4 +280,13 @@ export async function discardItem(
     console.error("Error updating XP:", updateError);
     throw new Error(`Failed to update XP: ${updateError.message}`);
   }
+
+  const { leveledUp } = await checkAndUpdateLevel(
+    supabase,
+    userId,
+    newXp,
+    currentLevel
+  );
+
+  return { leveledUp };
 }

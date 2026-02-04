@@ -20,8 +20,10 @@ import {
   addToInventory,
   type Affinity,
 } from "@/lib/leggings-game";
+import { getTodayPlayCountForGear } from "@/lib/playcount";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 const CDN_BASE_URL = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/affinities";
 
@@ -37,6 +39,7 @@ interface RoundData {
 }
 
 export default function LeggingsPage() {
+  const router = useRouter();
   const [isGameActive, setIsGameActive] = React.useState(false);
   const [answer, setAnswer] = React.useState<Affinity[]>([]);
   const [rounds, setRounds] = React.useState<RoundData[]>([]);
@@ -81,12 +84,16 @@ export default function LeggingsPage() {
     return answer;
   }, [allAffinities]);
 
-  const handlePlayGame = () => {
+  const handlePlayGame = async () => {
     if (allAffinities.length === 0) {
       alert("Affinities not loaded yet. Please wait...");
       return;
     }
-
+    const userId = await getCurrentUserId();
+    if (userId) {
+      await updatePlayCount(userId);
+      setTodayPlayCount((prev) => (prev !== null ? prev + 1 : null));
+    }
     const newAnswer = generateAnswer();
     setAnswer(newAnswer);
     setRounds([]);
@@ -345,7 +352,7 @@ Try to guess in as few rounds as possible.  Good luck!`;
               )}
             </div>
           )}
-          <Button onClick={handleResetGame} className="mt-4">
+          <Button onClick={() => router.push("/obtain-gear")} className="mt-4">
             Ok
           </Button>
         </div>
@@ -357,8 +364,17 @@ Try to guess in as few rounds as possible.  Good luck!`;
     <div className="space-y-6 p-6 min-h-screen bg-gray-200">
       {/* Header with buttons */}
       <div className="flex justify-between items-center">
-        <Button onClick={handlePlayGame} disabled={isLoading || isGameActive}>
-          Play Game
+        <Button
+          onClick={() => void handlePlayGame()}
+          disabled={
+            isLoading ||
+            isGameActive ||
+            (todayPlayCount !== null && todayPlayCount >= 3)
+          }
+        >
+          {todayPlayCount !== null && todayPlayCount >= 3
+            ? "No plays remaining today"
+            : "Play Game"}
         </Button>
         <Button variant="outline" onClick={() => setShowRules(true)}>
           Rules

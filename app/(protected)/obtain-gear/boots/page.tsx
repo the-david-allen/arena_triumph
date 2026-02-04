@@ -17,8 +17,10 @@ import {
   getRandomBootsByRarity,
   addToInventory,
 } from "@/lib/boots-game";
+import { getTodayPlayCountForGear } from "@/lib/playcount";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 const GRID_SIZE = 20;
 const NUM_MINES = 45;
@@ -135,7 +137,21 @@ export default function BootsPage() {
   } | null>(null);
   const [finalSeconds, setFinalSeconds] = React.useState(0);
   const [showRules, setShowRules] = React.useState(false);
+  const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
   const timerIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    getCurrentUserId().then((userId) => {
+      if (!userId || cancelled) return;
+      getTodayPlayCountForGear(userId, "Boots").then((count) => {
+        if (!cancelled) setTodayPlayCount(count);
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const longPressTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchTargetRef = React.useRef<{ row: number; col: number } | null>(null);
 
@@ -169,7 +185,6 @@ export default function BootsPage() {
     try {
       const userId = await getCurrentUserId();
       if (userId) {
-        await updatePlayCount(userId);
         await updateTopScores(userId, scoreSeconds);
         const rarity = await getRewardRarity(scoreSeconds);
         if (rarity) {
@@ -193,7 +208,12 @@ export default function BootsPage() {
     }
   }, [totalRevealed, isGameActive, mineMap, isGameEnding, hasLost, timer]);
 
-  const handlePlayGame = () => {
+  const handlePlayGame = async () => {
+    const userId = await getCurrentUserId();
+    if (userId) {
+      await updatePlayCount(userId);
+      setTodayPlayCount((prev) => (prev !== null ? prev + 1 : null));
+    }
     setMineMap(null);
     setAdjacentCounts(null);
     setRevealed(Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(false)));
@@ -335,7 +355,7 @@ export default function BootsPage() {
               )}
             </div>
           )}
-          <Button onClick={handleResetGame} className="mt-4">
+          <Button onClick={() => router.push("/obtain-gear")} className="mt-4">
             Ok
           </Button>
         </div>
@@ -346,8 +366,16 @@ export default function BootsPage() {
   return (
     <div className="space-y-6 p-6 min-h-screen bg-gray-200">
       <div className="flex justify-between items-center">
-        <Button onClick={handlePlayGame} disabled={isGameActive}>
-          Play Game
+        <Button
+          onClick={() => void handlePlayGame()}
+          disabled={
+            isGameActive ||
+            (todayPlayCount !== null && todayPlayCount >= 3)
+          }
+        >
+          {todayPlayCount !== null && todayPlayCount >= 3
+            ? "No plays remaining today"
+            : "Play Game"}
         </Button>
         <Button variant="outline" onClick={() => setShowRules(true)}>
           Rules

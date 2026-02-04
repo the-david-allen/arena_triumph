@@ -19,11 +19,13 @@ import {
   updateTopScores,
   type ShouldersReward,
 } from "@/lib/shoulders-game";
+import { getTodayPlayCountForGear } from "@/lib/playcount";
 import {
   computeScore,
   DIE_FACE_IMAGES,
   type DieFace,
 } from "@/lib/shoulders-scoring";
+import { useRouter } from "next/navigation";
 
 const RULES_TEXT = `You begin with 8 turns to try and achieve the highest score possible.  Roll 6 dice to start your turn.  You must Bank at least 1 die to continue rolling.  You may End Turn at any time to add your Banked Score to your overall Score, or you may roll the remaining dice to continue.  But if you roll no scoring dice, your turn will end, you will not score, and you'll be given a strike.  3 strikes ends the game.  Good luck!
 
@@ -188,7 +190,21 @@ export default function ShouldersPage() {
   const [finalScore, setFinalScore] = React.useState(0);
   const [rewardItem, setRewardItem] = React.useState<ShouldersReward | null>(null);
   const [strikeFromRoll, setStrikeFromRoll] = React.useState(false);
+  const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
   const suppressClickAfterDropToBankedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    getCurrentUserId().then((userId) => {
+      if (!userId || cancelled) return;
+      getTodayPlayCountForGear(userId, "Shoulders").then((count) => {
+        if (!cancelled) setTodayPlayCount(count);
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const suppressClickAfterDropToHandRef = React.useRef(false);
   const diceInHandRef = React.useRef<DieFace[]>(diceInHand);
   const pendingBankedRef = React.useRef<DieFace[]>(pendingBanked);
@@ -291,7 +307,6 @@ export default function ShouldersPage() {
     try {
       const userId = await getCurrentUserId();
       if (userId) {
-        await updatePlayCount(userId);
         await updateTopScores(userId, total);
         const rarity = await getRewardRarity(total);
         if (rarity) {
@@ -370,7 +385,7 @@ export default function ShouldersPage() {
               )}
             </div>
           )}
-          <Button onClick={handleResetAfterComplete} className="mt-4">
+          <Button onClick={() => router.push("/obtain-gear")} className="mt-4">
             Ok
           </Button>
         </div>
@@ -378,15 +393,29 @@ export default function ShouldersPage() {
     );
   }
 
+  const handlePlayGame = async () => {
+    const userId = await getCurrentUserId();
+    if (userId) {
+      await updatePlayCount(userId);
+      setTodayPlayCount((prev) => (prev !== null ? prev + 1 : null));
+    }
+    startGame();
+  };
+
   return (
     <div className="space-y-6 p-6 min-h-screen bg-background">
       <div className="flex justify-between items-center">
         <Button
-          onClick={startGame}
-          disabled={isGameActive}
+          onClick={() => void handlePlayGame()}
+          disabled={
+            isGameActive ||
+            (todayPlayCount !== null && todayPlayCount >= 3)
+          }
           className="shadow-md border-2 border-b-4 border-gray-700 bg-primary text-primary-foreground hover:bg-primary/90"
         >
-          Play Game
+          {todayPlayCount !== null && todayPlayCount >= 3
+            ? "No plays remaining today"
+            : "Play Game"}
         </Button>
         <Button
           variant="outline"

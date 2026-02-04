@@ -19,6 +19,8 @@ import {
   updateTopScores,
   type GauntletsReward,
 } from "@/lib/gauntlets-game";
+import { getTodayPlayCountForGear } from "@/lib/playcount";
+import { useRouter } from "next/navigation";
 
 const CDN_BASE = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/gauntlets_game";
 const ASSETS = {
@@ -124,6 +126,20 @@ export default function GauntletsPage() {
   const [showCompletionScreen, setShowCompletionScreen] = React.useState(false);
   const [finalSeconds, setFinalSeconds] = React.useState(0);
   const [rewardGauntlets, setRewardGauntlets] = React.useState<GauntletsReward | null>(null);
+  const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    getCurrentUserId().then((userId) => {
+      if (!userId || cancelled) return;
+      getTodayPlayCountForGear(userId, "Gauntlets").then((count) => {
+        if (!cancelled) setTodayPlayCount(count);
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const patronsRef = React.useRef<Patron[]>([]);
   const mugsRef = React.useRef<Mug[]>([]);
@@ -188,7 +204,6 @@ export default function GauntletsPage() {
       try {
         const userId = await getCurrentUserId();
         if (userId) {
-          await updatePlayCount(userId);
           await updateTopScores(userId, finalTime);
           const rarity = await getRewardRarity(finalTime);
           if (rarity) {
@@ -519,7 +534,7 @@ export default function GauntletsPage() {
               )}
             </div>
           )}
-          <Button onClick={handleResetGame} className="mt-4">
+          <Button onClick={() => router.push("/obtain-gear")} className="mt-4">
             Ok
           </Button>
         </div>
@@ -527,11 +542,29 @@ export default function GauntletsPage() {
     );
   }
 
+  const handlePlayGame = async () => {
+    const userId = await getCurrentUserId();
+    if (userId) {
+      await updatePlayCount(userId);
+      setTodayPlayCount((prev) => (prev !== null ? prev + 1 : null));
+    }
+    startCountdown();
+  };
+
   return (
     <div className="space-y-6 p-6 min-h-screen bg-gray-200">
       <div className="flex justify-between items-center">
-        <Button onClick={startCountdown} disabled={isCountingDown || isGameActive}>
-          Play Game
+        <Button
+          onClick={() => void handlePlayGame()}
+          disabled={
+            isCountingDown ||
+            isGameActive ||
+            (todayPlayCount !== null && todayPlayCount >= 3)
+          }
+        >
+          {todayPlayCount !== null && todayPlayCount >= 3
+            ? "No plays remaining today"
+            : "Play Game"}
         </Button>
         <Button variant="outline" onClick={() => setShowRules(true)}>
           Rules

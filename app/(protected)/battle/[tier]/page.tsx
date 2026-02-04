@@ -48,9 +48,16 @@ export default function BattleTierPage() {
   const [statusText, setStatusText] = useState("");
   const [showHitBar, setShowHitBar] = useState(false);
   const [isPlayerTurnNext, setIsPlayerTurnNext] = useState(true);
+  const [showLevelUp, setShowLevelUp] = useState(false);
   const userIdRef = useRef<string | null>(null);
   const hasUpdatedHasFoughtRef = useRef(false);
   const bossTurnProcessedRef = useRef(false);
+
+  useEffect(() => {
+    if (!showLevelUp) return;
+    const t = setTimeout(() => setShowLevelUp(false), 2000);
+    return () => clearTimeout(t);
+  }, [showLevelUp]);
 
   const loadBattle = useCallback(async () => {
     const supabase = createClient();
@@ -166,7 +173,11 @@ export default function BattleTierPage() {
         if (newHealth <= 0) {
           const uid = userIdRef.current;
           if (uid) {
-            awardVictoryXP(uid, tier).catch(console.error);
+            awardVictoryXP(uid, tier)
+              .then((result) => {
+                if (result.leveledUp) setShowLevelUp(true);
+              })
+              .catch(console.error);
           }
           setPhase("player_wins");
           setStatusText("Boss Defeated! XP awarded");
@@ -301,6 +312,11 @@ export default function BattleTierPage() {
         <DebugWindow stats={stats} />
       </div>
 
+      {phase === "player_wins" && showLevelUp && (
+        <p className="text-center text-2xl font-bold text-primary">
+          Level Up!
+        </p>
+      )}
       {(phase === "player_wins" || phase === "boss_wins") && (
         <div className="flex justify-center">
           <Button asChild>

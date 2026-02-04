@@ -12,7 +12,9 @@ import {
 import { Card, CardData } from "@/components/chestpiece/Card";
 import { GameSlot } from "@/components/chestpiece/GameSlot";
 import { fetchChestGameCards, updatePlayCount, getCurrentUserId, updateTopScores, getRewardRarity, getRandomChestByRarity, addToInventory } from "@/lib/chestpiece-game";
+import { getTodayPlayCountForGear } from "@/lib/playcount";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 type SlotName =
   | "Helm"
@@ -50,6 +52,7 @@ const HORIZONTAL_LINES: Record<number, SlotName[]> = {
 };
 
 export default function ChestpiecePage() {
+  const router = useRouter();
   const [deck, setDeck] = React.useState<CardData[]>([]);
   const [currentCard, setCurrentCard] = React.useState<CardData | null>(null);
   const [slots, setSlots] = React.useState<SlotState>({
@@ -77,6 +80,20 @@ export default function ChestpiecePage() {
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [showCompletionScreen, setShowCompletionScreen] = React.useState(false);
   const [rewardChestpiece, setRewardChestpiece] = React.useState<{ id: string; name: string; image_url: string | null } | null>(null);
+  const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    getCurrentUserId().then((userId) => {
+      if (!userId || cancelled) return;
+      getTodayPlayCountForGear(userId, "Chestpiece").then((count) => {
+        if (!cancelled) setTodayPlayCount(count);
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // #region agent log
   React.useEffect(() => {
@@ -95,6 +112,11 @@ export default function ChestpiecePage() {
   };
 
   const handlePlayGame = async () => {
+    const userId = await getCurrentUserId();
+    if (userId) {
+      await updatePlayCount(userId);
+      setTodayPlayCount((prev) => (prev !== null ? prev + 1 : null));
+    }
     setIsLoading(true);
     // #region agent log
     console.log('[DEBUG] handlePlayGame called, isLoading=true');
@@ -408,7 +430,7 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
               )}
             </div>
           )}
-          <Button onClick={handleResetGame} className="mt-4">Ok</Button>
+          <Button onClick={() => router.push("/obtain-gear")} className="mt-4">Ok</Button>
         </div>
       </div>
     );
@@ -418,8 +440,19 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
     <div className="space-y-6 p-6 min-h-screen bg-gray-200">
       {/* Header with buttons */}
       <div className="flex justify-between items-center">
-        <Button onClick={handlePlayGame} disabled={isLoading || isGameActive}>
-          {isLoading ? "Loading..." : "Play Game"}
+        <Button
+          onClick={() => void handlePlayGame()}
+          disabled={
+            isLoading ||
+            isGameActive ||
+            (todayPlayCount !== null && todayPlayCount >= 3)
+          }
+        >
+          {isLoading
+            ? "Loading..."
+            : todayPlayCount !== null && todayPlayCount >= 3
+              ? "No plays remaining today"
+              : "Play Game"}
         </Button>
         <Button variant="outline" onClick={() => setShowRules(true)}>
           Rules

@@ -38,10 +38,17 @@ export default function InventoryPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [isActionLoading, setIsActionLoading] = React.useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = React.useState(false);
+  const [showLevelUp, setShowLevelUp] = React.useState(false);
   const [pendingDiscard, setPendingDiscard] = React.useState<{
     item: InventoryItem;
     xpVal: number;
   } | null>(null);
+
+  React.useEffect(() => {
+    if (!showLevelUp) return;
+    const t = setTimeout(() => setShowLevelUp(false), 2000);
+    return () => clearTimeout(t);
+  }, [showLevelUp]);
 
   const loadEquippedItems = React.useCallback(async () => {
     const userId = await getCurrentUserId();
@@ -134,10 +141,15 @@ export default function InventoryPage() {
     if (!userId) return;
     setIsActionLoading(true);
     try {
-      await discardItem(userId, pendingDiscard.item.gear_id, pendingDiscard.xpVal);
+      const result = await discardItem(
+        userId,
+        pendingDiscard.item.gear_id,
+        pendingDiscard.xpVal
+      );
       setShowDiscardConfirm(false);
       setPendingDiscard(null);
       setSelectedInventoryItem(null);
+      if (result.leveledUp) setShowLevelUp(true);
       await loadEquippedItems();
       if (selectedSlot) {
         await loadInventoryForSlot(selectedSlot);
@@ -170,6 +182,9 @@ export default function InventoryPage() {
         <p className="mt-2 text-muted-foreground">
           View, equip, and remove items from your inventory.
         </p>
+        {showLevelUp && (
+          <p className="mt-2 text-2xl font-bold text-primary">Level Up!</p>
+        )}
       </div>
 
       <div className="flex flex-col gap-6 lg:flex-row">

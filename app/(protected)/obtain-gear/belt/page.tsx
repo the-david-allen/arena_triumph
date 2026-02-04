@@ -19,6 +19,7 @@ import {
 } from "@/lib/belt-game";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 const GRID_SIZE = 12;
 
@@ -281,6 +282,7 @@ function generatePuzzle(): {
 }
 
 export default function BeltPage() {
+  const router = useRouter();
   const [isGameActive, setIsGameActive] = React.useState(false);
   const [puzzle, setPuzzle] = React.useState<boolean[][] | null>(null);
   const [playerGrid, setPlayerGrid] = React.useState<CellState[][]>(
@@ -304,6 +306,20 @@ export default function BeltPage() {
   const [dragState, setDragState] = React.useState<"green" | "x" | null>(null);
   const [beltIconPositions, setBeltIconPositions] = React.useState<Set<string>>(new Set());
   const [showSolution, setShowSolution] = React.useState(false);
+  const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    getCurrentUserId().then((userId) => {
+      if (!userId || cancelled) return;
+      getTodayPlayCountForGear(userId, "Belt").then((count) => {
+        if (!cancelled) setTodayPlayCount(count);
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const mouseMovedRef = React.useRef(false);
   const mouseDownCellRef = React.useRef<{ row: number; col: number } | null>(null);
   const timerIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -349,7 +365,12 @@ export default function BeltPage() {
     }
   }, [playerGrid, puzzle, isGameActive, isGameEnding]);
 
-  const handlePlayGame = () => {
+  const handlePlayGame = async () => {
+    const userId = await getCurrentUserId();
+    if (userId) {
+      await updatePlayCount(userId);
+      setTodayPlayCount((prev) => (prev !== null ? prev + 1 : null));
+    }
     const { puzzle: newPuzzle, rowHints: newRowHints, columnHints: newColumnHints } = generatePuzzle();
     setPuzzle(newPuzzle);
     setRowHints(newRowHints);
@@ -606,7 +627,7 @@ Left click on a square to make it dark green. Right click to mark with X. Click 
               )}
             </div>
           )}
-          <Button onClick={handleResetGame} className="mt-4">
+          <Button onClick={() => router.push("/obtain-gear")} className="mt-4">
             Ok
           </Button>
         </div>
@@ -622,8 +643,16 @@ Left click on a square to make it dark green. Right click to mark with X. Click 
     <div className="space-y-6 p-6 min-h-screen bg-gray-200">
       {/* Header with buttons */}
       <div className="flex justify-between items-center">
-        <Button onClick={handlePlayGame} disabled={isGameActive}>
-          Play Game
+        <Button
+          onClick={() => void handlePlayGame()}
+          disabled={
+            isGameActive ||
+            (todayPlayCount !== null && todayPlayCount >= 3)
+          }
+        >
+          {todayPlayCount !== null && todayPlayCount >= 3
+            ? "No plays remaining today"
+            : "Play Game"}
         </Button>
         <Button variant="outline" onClick={() => setShowRules(true)}>
           Rules
