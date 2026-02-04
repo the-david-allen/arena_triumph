@@ -98,17 +98,30 @@ export async function fetchBattleData(
 ): Promise<BattleData | null> {
   const supabase = createClient();
 
-  const today = new Date().toISOString().split("T")[0];
-
   const { data: lineupRow, error: lineupError } = await supabase
     .from("daily_boss_lineup")
     .select("boss_id")
-    .eq("lineup_date", today)
     .eq("tier", tier)
+    .limit(1)
     .maybeSingle();
 
-  if (lineupError || !lineupRow?.boss_id) {
+  let bossIdToUse: string | null = lineupRow?.boss_id ?? null;
+
+  if (lineupError) {
     return null;
+  }
+
+  if (!bossIdToUse) {
+    const { data: fallbackRow } = await supabase
+      .from("bosses_lookup")
+      .select("id")
+      .eq("tier", tier)
+      .limit(1)
+      .maybeSingle();
+    bossIdToUse = fallbackRow?.id ?? null;
+    if (!bossIdToUse) {
+      return null;
+    }
   }
 
   const { data: bossRow, error: bossError } = await supabase
@@ -116,7 +129,7 @@ export async function fetchBattleData(
     .select(
       "id, name, image_url, attack_strength, attack_affinity, defense_strength, defense_affinity, health"
     )
-    .eq("id", lineupRow.boss_id)
+    .eq("id", bossIdToUse)
     .single();
 
   if (bossError || !bossRow) {

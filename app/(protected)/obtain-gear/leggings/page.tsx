@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { AffinityStrengthsDialog } from "@/components/AffinityStrengthsDialog";
 import {
   fetchAllAffinities,
   fetchAffinityMatchups,
@@ -39,6 +40,9 @@ interface RoundData {
 }
 
 export default function LeggingsPage() {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'leggings/page.tsx:41',message:'LeggingsPage render',data:{hasRouter:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   const router = useRouter();
   const [isGameActive, setIsGameActive] = React.useState(false);
   const [answer, setAnswer] = React.useState<Affinity[]>([]);
@@ -55,6 +59,20 @@ export default function LeggingsPage() {
   const [finalRounds, setFinalRounds] = React.useState(0);
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGameEnding, setIsGameEnding] = React.useState(false);
+  const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    getCurrentUserId().then((userId) => {
+      if (!userId || cancelled) return;
+      getTodayPlayCountForGear(userId, "Leggings").then((count) => {
+        if (!cancelled) setTodayPlayCount(count);
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Load affinities and matchups when component mounts
   React.useEffect(() => {
@@ -281,45 +299,6 @@ export default function LeggingsPage() {
     setSelectedAffinity(null);
   };
 
-  // Build matchup table data for Strengths dialog
-  const buildMatchupTable = () => {
-    const tableData: Array<{
-      affinity: Affinity;
-      strongAgainst: Affinity[];
-      weakAgainst: Affinity[];
-    }> = [];
-
-    for (const affinity of allAffinities) {
-      const strongAgainst: Affinity[] = [];
-      const weakAgainst: Affinity[] = [];
-
-      // Find all affinities that this affinity is strong against
-      const strongAgainstSet = affinityMatchups.get(affinity.id);
-      if (strongAgainstSet) {
-        for (const strongId of strongAgainstSet) {
-          const strongAffinity = allAffinities.find(a => a.id === strongId);
-          if (strongAffinity) {
-            strongAgainst.push(strongAffinity);
-          }
-        }
-      }
-
-      // Find all affinities that are strong against this affinity (making this weak against them)
-      for (const [otherId, otherStrongSet] of affinityMatchups.entries()) {
-        if (otherStrongSet.has(affinity.id)) {
-          const weakAffinity = allAffinities.find(a => a.id === otherId);
-          if (weakAffinity) {
-            weakAgainst.push(weakAffinity);
-          }
-        }
-      }
-
-      tableData.push({ affinity, strongAgainst, weakAgainst });
-    }
-
-    return tableData;
-  };
-
   const rulesText = `A random set of 5 Affinities has been chosen as the answer.  Take a guess and learn how many affinities you guessed are an exact match and how many match but in the wrong location.
 
 Each round, a random guess slot is highlighted and you will also learn which affinities in the answer are strong against or weak against the affinity guessed in that slot.
@@ -360,6 +339,9 @@ Try to guess in as few rounds as possible.  Good luck!`;
     );
   }
 
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'leggings/page.tsx:pre-main-return',message:'About to return main UI',data:{showCompletionScreen,todayPlayCount},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'verify'})}).catch(()=>{});
+  // #endregion
   return (
     <div className="space-y-6 p-6 min-h-screen bg-gray-200">
       {/* Header with buttons */}
@@ -559,98 +541,10 @@ Try to guess in as few rounds as possible.  Good luck!`;
         </DialogContent>
       </Dialog>
 
-      {/* Strengths Dialog */}
-      <Dialog open={showStrengths} onOpenChange={setShowStrengths}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Affinity Strengths</DialogTitle>
-            <DialogDescription>
-              Relationship between affinities
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b-2">
-                  <th className="text-left p-2">Affinity</th>
-                  <th className="text-left p-2">Strong Against:</th>
-                  <th className="text-left p-2">Weak Against:</th>
-                </tr>
-              </thead>
-              <tbody>
-                {buildMatchupTable().map((row) => {
-                  const affinityName = (row.affinity.affinity_name as string).toLowerCase();
-                  return (
-                    <tr key={row.affinity.id} className="border-b">
-                      <td className="p-2">
-                        <div className="flex items-center gap-2">
-                          <Image
-                            src={`${CDN_BASE_URL}/${affinityName}.jpg`}
-                            alt={row.affinity.affinity_name as string}
-                            width={32}
-                            height={32}
-                            className="w-8 h-8 object-cover rounded"
-                            unoptimized
-                          />
-                          <span className="font-semibold">{row.affinity.affinity_name as string}</span>
-                        </div>
-                      </td>
-                      <td className="p-2">
-                        {row.strongAgainst.length > 0 ? (
-                          <div className="flex flex-wrap gap-2 items-center">
-                            {row.strongAgainst.map((a) => {
-                              const strongName = (a.affinity_name as string).toLowerCase();
-                              return (
-                                <div key={a.id} className="flex items-center gap-1">
-                                  <Image
-                                    src={`${CDN_BASE_URL}/${strongName}.jpg`}
-                                    alt={a.affinity_name as string}
-                                    width={24}
-                                    height={24}
-                                    className="w-6 h-6 object-cover rounded"
-                                    unoptimized
-                                  />
-                                  <span>{a.affinity_name as string}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          "None"
-                        )}
-                      </td>
-                      <td className="p-2">
-                        {row.weakAgainst.length > 0 ? (
-                          <div className="flex flex-wrap gap-2 items-center">
-                            {row.weakAgainst.map((a) => {
-                              const weakName = (a.affinity_name as string).toLowerCase();
-                              return (
-                                <div key={a.id} className="flex items-center gap-1">
-                                  <Image
-                                    src={`${CDN_BASE_URL}/${weakName}.jpg`}
-                                    alt={a.affinity_name as string}
-                                    width={24}
-                                    height={24}
-                                    className="w-6 h-6 object-cover rounded"
-                                    unoptimized
-                                  />
-                                  <span>{a.affinity_name as string}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          "None"
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AffinityStrengthsDialog
+        open={showStrengths}
+        onOpenChange={setShowStrengths}
+      />
     </div>
   );
 }

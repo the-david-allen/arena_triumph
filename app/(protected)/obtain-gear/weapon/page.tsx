@@ -91,6 +91,7 @@ export default function WeaponPage() {
   const [placeJustClicked, setPlaceJustClicked] = React.useState(false);
   const [rollJustClicked, setRollJustClicked] = React.useState(false);
   const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
+  const router = useRouter();
 
   React.useEffect(() => {
     let cancelled = false;

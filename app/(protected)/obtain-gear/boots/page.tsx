@@ -139,6 +139,7 @@ export default function BootsPage() {
   const [showRules, setShowRules] = React.useState(false);
   const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
   const timerIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const router = useRouter();
 
   React.useEffect(() => {
     let cancelled = false;

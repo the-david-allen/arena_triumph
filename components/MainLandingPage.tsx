@@ -1,70 +1,71 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { PageShell } from "@/components/ui/PageShell";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { AffinityStrengthsDialog } from "@/components/AffinityStrengthsDialog";
+import { cn } from "@/lib/cn";
 
 export function MainLandingPage() {
+  const [affinityOpen, setAffinityOpen] = useState(false);
+
   return (
-    <div className="space-y-6">
-      <Card className="shadow-lg">
-        <CardContent className="pt-6">
-          <div className="space-y-4 text-center">
-            <h1 className="text-4xl font-bold text-foreground">
-              Welcome to the Arena. Can you triumph?
-            </h1>
-            
-            <div className="space-y-3 text-lg text-muted-foreground max-w-3xl mx-auto">
-              <p>
-                You'll need to master a number of challenges to have a chance at beating some of the Arena bosses.
-              </p>
-              
-              <p>
-                Obtain Gear for your armor and weapon slots by beating that slot's challenge - the better you do, the better gear you'll receive.
-              </p>
-              
-              <p>
-                Manage your Inventory by equipping or removing gear.
-              </p>
-              
-              <p>
-                When you're ready, Battle to test your strength against today's Arena bosses.
-              </p>
-            </div>
+    <>
+      <PageShell
+        className="min-h-[60vh] bg-bg bg-[radial-gradient(ellipse_80%_80%_at_50%_0%,hsl(var(--surface)/0.25),transparent)]"
+        maxWidth="7xl"
+      >
+        <div className="flex flex-col items-center text-center">
+          <h1 className="font-display text-4xl font-bold tracking-tight text-text sm:text-5xl">
+            Welcome to the Arena
+          </h1>
+          <p className="mt-3 max-w-2xl text-lg text-muted-foreground sm:text-xl">
+            Obtain Gear → Manage Your Inventory → Battle Bosses
+          </p>
+
+          <div className="mt-8 flex w-full flex-col gap-4 sm:flex-row sm:justify-center sm:gap-6">
+            <Link
+              href="/daily-rewards"
+              className={cn(
+                buttonVariants({ variant: "secondary", size: "lg" }),
+                "min-h-[44px] min-w-[140px] sm:min-w-[160px]"
+              )}
+            >
+              Daily Rewards
+            </Link>
+            <Button
+              variant="outline"
+              size="lg"
+              className="min-h-[44px] min-w-[140px] sm:min-w-[160px]"
+              onClick={() => setAffinityOpen(true)}
+            >
+              Affinity Reference
+            </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="mt-10 transition-shadow hover:shadow-md">
           <CardContent className="pt-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold text-foreground">Battle</h2>
-              <p className="text-muted-foreground">
-                Test your strength against today's Arena bosses
+            <div className="space-y-3 text-center font-body text-text">
+              <p className="text-base text-muted-foreground sm:text-lg">
+                You&apos;ll need to master a number of challenges to have a
+                chance at beating some of the Arena bosses.
+              </p>
+              <p className="text-base text-muted-foreground sm:text-lg">
+                Obtain Gear for your armor and weapon slots by beating that
+                slot&apos;s challenge — the better you do, the better gear
+                you&apos;ll receive. Manage your Inventory by equipping or
+                removing gear. When you&apos;re ready, Battle to test your
+                strength against today&apos;s Arena bosses.
               </p>
             </div>
           </CardContent>
         </Card>
+      </PageShell>
 
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardContent className="pt-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold text-foreground">Obtain Gear</h2>
-              <p className="text-muted-foreground">
-                Master challenges to earn powerful equipment
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardContent className="pt-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold text-foreground">Manage Inventory</h2>
-              <p className="text-muted-foreground">
-                Equip your best gear for battle
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+      <AffinityStrengthsDialog open={affinityOpen} onOpenChange={setAffinityOpen} />
+    </>
   );
 }

@@ -192,6 +192,7 @@ export default function ShouldersPage() {
   const [strikeFromRoll, setStrikeFromRoll] = React.useState(false);
   const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
   const suppressClickAfterDropToBankedRef = React.useRef(false);
+  const router = useRouter();
 
   React.useEffect(() => {
     let cancelled = false;

@@ -4,6 +4,7 @@
 
 @layer base {
   :root {
+    /* Legacy shadcn-style (kept for compatibility) */
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
@@ -24,6 +25,21 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
+
+    /* Theme tokens — light parchment */
+    --bg: 40 25% 97%;
+    --surface: 40 20% 94%;
+    --surface-2: 40 18% 90%;
+    --text: 25 15% 15%;
+    --muted: 25 10% 45%;
+    --border: 40 15% 88%;
+    --ring: 25 30% 25%;
+    --primary: 25 45% 28%;
+    --primary-foreground: 40 30% 96%;
+    --secondary: 40 20% 90%;
+    --secondary-foreground: 25 15% 20%;
+    --danger: 0 65% 50%;
+    --danger-foreground: 0 0% 100%;
   }
 
   .dark {
@@ -54,6 +70,11 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-body;
+    line-height: 1.6;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display), serif;
+    line-height: 1.25;
   }
 }

@@ -10,7 +10,7 @@ export default async function ProtectedLayout({
   // which is not available in Edge Runtime
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-bg">
       <NavigationBar />
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {children}

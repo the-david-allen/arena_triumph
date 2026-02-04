@@ -127,6 +127,7 @@ export default function GauntletsPage() {
   const [finalSeconds, setFinalSeconds] = React.useState(0);
   const [rewardGauntlets, setRewardGauntlets] = React.useState<GauntletsReward | null>(null);
   const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
+  const router = useRouter();
 
   React.useEffect(() => {
     let cancelled = false;
