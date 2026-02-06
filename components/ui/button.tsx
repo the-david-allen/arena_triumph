@@ -12,21 +12,21 @@ const buttonRecipe = recipe({
   variants: {
     variant: {
       primary:
-        "bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/80",
+        "shadow-md border-2 border-b-4 border-ring bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/80",
       secondary:
-        "bg-secondary text-secondary-foreground hover:bg-secondary/80 active:bg-secondary/70",
+        "shadow-md border-2 border-b-4 border-ring bg-secondary text-secondary-foreground hover:bg-secondary/80 active:bg-secondary/70",
       ghost:
         "hover:bg-surface-2 hover:text-text active:bg-surface-2/80",
       danger:
-        "bg-danger text-danger-foreground hover:bg-danger/90 active:bg-danger/80",
+        "shadow-md border-2 border-b-4 border-ring bg-danger text-danger-foreground hover:bg-danger/90 active:bg-danger/80",
       link:
         "text-primary underline-offset-4 hover:underline",
       default:
-        "bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/80",
+        "shadow-md border-2 border-b-4 border-ring bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/80",
       destructive:
-        "bg-danger text-danger-foreground hover:bg-danger/90 active:bg-danger/80",
+        "shadow-md border-2 border-b-4 border-ring bg-danger text-danger-foreground hover:bg-danger/90 active:bg-danger/80",
       outline:
-        "border border-border bg-bg hover:bg-surface hover:text-text",
+        "shadow-md border-2 border-b-4 border-ring bg-bg hover:bg-surface hover:text-text",
     },
     size: {
       sm: "h-9 rounded-md px-3",

@@ -18,6 +18,7 @@ import {
   addToInventory,
 } from "@/lib/weapon-game";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
+import { playDiceRollSound } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -148,7 +149,8 @@ export default function WeaponPage() {
   // Handle dice roll
   const handleRoll = () => {
     if (rollJustClicked) return; // Prevent multiple clicks
-    
+    playDiceRollSound();
+
     // Immediately disable Roll button
     setRollJustClicked(true);
     

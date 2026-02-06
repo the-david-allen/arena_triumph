@@ -487,19 +487,25 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
                   onMouseEnter={()=>{fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chestpiece/page.tsx:310',message:'Deck button render',data:{deckLength:deck.length,currentCard:currentCard?.card_id||null,disabled:deck.length===0||currentCard!==null,isGameActive},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C,D,E'})}).catch(()=>{});}}
                   // #endregion
                   className={cn(
-                    "w-24 h-32 rounded-lg border-2 border-gray-600 bg-gradient-to-br from-blue-600 to-blue-800",
-                    "flex items-center justify-center text-white font-bold shadow-lg",
-                    "hover:from-blue-700 hover:to-blue-900 transition-all",
+                    "w-24 h-32 rounded-lg border-2 border-gray-600 overflow-hidden",
+                    "flex items-center justify-center shadow-lg relative",
+                    "hover:ring-2 hover:ring-blue-400 transition-all",
                     "disabled:opacity-50 disabled:cursor-not-allowed"
                   )}
                 >
                   {deck.length > 0 ? (
-                    <div className="text-center">
-                      <div className="text-2xl">🃏</div>
-                      <div className="text-xs mt-1">{deck.length}</div>
-                    </div>
+                    <>
+                      <img
+                        src="https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/bling/card_back.png"
+                        alt="Card back"
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                      <span className="relative z-10 text-white text-sm font-bold drop-shadow-md bg-black/40 px-1.5 py-0.5 rounded">
+                        {deck.length}
+                      </span>
+                    </>
                   ) : (
-                    <div className="text-sm">Empty</div>
+                    <div className="text-sm text-gray-600">Empty</div>
                   )}
                 </button>
                 <div className="text-xs text-gray-600">Deck</div>

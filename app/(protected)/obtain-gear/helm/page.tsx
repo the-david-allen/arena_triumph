@@ -18,6 +18,7 @@ import {
   addToInventory,
 } from "@/lib/helm-game";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
+import { playDiceRollSound } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -87,6 +88,7 @@ export default function HelmPage() {
   }, [strength, encumberance]);
 
   const rollDice = () => {
+    playDiceRollSound();
     const numbered1 = Math.floor(Math.random() * 6) + 1;
     const numbered2 = Math.floor(Math.random() * 6) + 1;
     const slot1 = SLOT_ORDER[Math.floor(Math.random() * 6)];

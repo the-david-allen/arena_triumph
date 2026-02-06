@@ -20,6 +20,7 @@ import {
   type ShouldersReward,
 } from "@/lib/shoulders-game";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
+import { playDiceRollSound } from "@/lib/sounds";
 import {
   computeScore,
   DIE_FACE_IMAGES,
@@ -44,7 +45,17 @@ Weapon:  100
 const INITIAL_TURNS = 8;
 const TOTAL_DICE = 6;
 
-function rollDice(count: number): DieFace[] {
+interface RolledDie {
+  face: DieFace;
+  angle: number;
+  offset: number;
+}
+
+function randomBetween(min: number, max: number): number {
+  return min + Math.random() * (max - min);
+}
+
+function rollDice(count: number): RolledDie[] {
   const faces: DieFace[] = [
     "Armor",
     "Weapon",
@@ -53,9 +64,13 @@ function rollDice(count: number): DieFace[] {
     "Verdant",
     "Rock",
   ];
-  const result: DieFace[] = [];
+  const result: RolledDie[] = [];
   for (let i = 0; i < count; i++) {
-    result.push(faces[Math.floor(Math.random() * faces.length)]);
+    result.push({
+      face: faces[Math.floor(Math.random() * faces.length)],
+      angle: randomBetween(-30, 30),
+      offset: Math.floor(randomBetween(-5, 6)),
+    });
   }
   return result;
 }
@@ -78,7 +93,7 @@ function DieFaceIcon({ face, size = "md" }: { face: DieFace; size?: "sm" | "md" 
 
 function ScoringReferenceBox() {
   return (
-    <div className="rounded-lg border-2 border-gray-700 bg-card p-4 shadow-md w-64 shrink-0">
+    <div className="rounded-lg border-2 border-gray-700 bg-card p-4 shadow-md w-[333px] shrink-0">
       <h3 className="font-semibold text-sm mb-3">Valid Scoring Combinations</h3>
       <ul className="space-y-2 text-sm">
         <li className="flex items-center gap-2 flex-wrap">
@@ -91,26 +106,26 @@ function ScoringReferenceBox() {
         </li>
         <li className="flex items-center gap-2 flex-wrap">
           <DieFaceIcon face="Armor" size="sm" />
-          <span className="opacity-70">×3</span>
+          <span className="text-black">×3</span>
           <span>or</span>
           <DieFaceIcon face="Weapon" size="sm" />
-          <span className="opacity-70">×3</span>
+          <span className="text-black">×3</span>
           <span>: 800</span>
         </li>
         <li className="flex items-center gap-2 flex-wrap">
           <DieFaceIcon face="Aquatic" size="sm" />
-          <span className="opacity-70">×3</span>
+          <span className="text-black">×3</span>
           <span>or</span>
           <DieFaceIcon face="Fire" size="sm" />
-          <span className="opacity-70">×3</span>
+          <span className="text-black">×3</span>
           <span>: 250</span>
         </li>
         <li className="flex items-center gap-2 flex-wrap">
           <DieFaceIcon face="Verdant" size="sm" />
-          <span className="opacity-70">×3</span>
+          <span className="text-black">×3</span>
           <span>or</span>
           <DieFaceIcon face="Rock" size="sm" />
-          <span className="opacity-70">×3</span>
+          <span className="text-black">×3</span>
           <span>: 500</span>
         </li>
         <li className="flex items-center gap-2 flex-wrap">
@@ -132,12 +147,16 @@ function ScoringReferenceBox() {
 
 function Die({
   face,
+  angle = 0,
+  offset = 0,
   onClick,
   onDragStart,
   draggable,
   disabled,
 }: {
   face: DieFace;
+  angle?: number;
+  offset?: number;
   onClick?: () => void;
   onDragStart?: (e: React.DragEvent) => void;
   draggable?: boolean;
@@ -159,6 +178,9 @@ function Die({
       className={`relative w-14 h-14 shrink-0 rounded border-2 border-gray-400 bg-white overflow-hidden ${
         disabled ? "pointer-events-none opacity-60" : "cursor-pointer hover:border-primary"
       }`}
+      style={{
+        transform: `rotate(${angle}deg) translateY(${offset}px)`,
+      }}
       aria-label={`Die showing ${face}`}
     >
       <Image
@@ -179,9 +201,9 @@ export default function ShouldersPage() {
   const [score, setScore] = React.useState(0);
   const [strikes, setStrikes] = React.useState(0);
   const [bankedScore, setBankedScore] = React.useState(0);
-  const [diceInHand, setDiceInHand] = React.useState<DieFace[]>([]);
-  const [bankedDice, setBankedDice] = React.useState<DieFace[]>([]);
-  const [pendingBanked, setPendingBanked] = React.useState<DieFace[]>([]);
+  const [diceInHand, setDiceInHand] = React.useState<RolledDie[]>([]);
+  const [bankedDice, setBankedDice] = React.useState<RolledDie[]>([]);
+  const [pendingBanked, setPendingBanked] = React.useState<RolledDie[]>([]);
   const [rollDisabled, setRollDisabled] = React.useState(false);
   const [bankDisabled, setBankDisabled] = React.useState(true);
   const [showRules, setShowRules] = React.useState(false);
@@ -207,14 +229,14 @@ export default function ShouldersPage() {
     };
   }, []);
   const suppressClickAfterDropToHandRef = React.useRef(false);
-  const diceInHandRef = React.useRef<DieFace[]>(diceInHand);
-  const pendingBankedRef = React.useRef<DieFace[]>(pendingBanked);
+  const diceInHandRef = React.useRef<RolledDie[]>(diceInHand);
+  const pendingBankedRef = React.useRef<RolledDie[]>(pendingBanked);
 
   diceInHandRef.current = diceInHand;
   pendingBankedRef.current = pendingBanked;
 
   const pendingResult = React.useMemo(
-    () => computeScore(pendingBanked),
+    () => computeScore(pendingBanked.map((d) => d.face)),
     [pendingBanked]
   );
   const canBank = pendingResult.valid;
@@ -242,8 +264,9 @@ export default function ShouldersPage() {
   }, []);
 
   const handleRoll = React.useCallback(() => {
+    playDiceRollSound();
     const inBanked = bankedDice.length + pendingBanked.length;
-    let newDice: DieFace[];
+    let newDice: RolledDie[];
     if (inBanked === TOTAL_DICE) {
       setBankedDice([]);
       setPendingBanked([]);
@@ -254,7 +277,7 @@ export default function ShouldersPage() {
       setDiceInHand(newDice);
     }
     setRollDisabled(true);
-    const rollScores = computeScore(newDice).valid;
+    const rollScores = computeScore(newDice.map((d) => d.face)).valid;
     if (!rollScores) {
       setBankedScore(0);
       setBankDisabled(true);
@@ -412,7 +435,6 @@ export default function ShouldersPage() {
             isGameActive ||
             (todayPlayCount !== null && todayPlayCount >= 3)
           }
-          className="shadow-md border-2 border-b-4 border-gray-700 bg-primary text-primary-foreground hover:bg-primary/90"
         >
           {todayPlayCount !== null && todayPlayCount >= 3
             ? "No plays remaining today"
@@ -421,7 +443,6 @@ export default function ShouldersPage() {
         <Button
           variant="outline"
           onClick={() => setShowRules(true)}
-          className="shadow-md border-2 border-b-4 border-gray-700"
         >
           Rules
         </Button>
@@ -445,7 +466,7 @@ export default function ShouldersPage() {
           </div>
 
           <div
-            className="min-h-[140px] w-full rounded-md border-2 border-dashed border-gray-400 bg-muted/30 flex flex-wrap gap-2 p-3 items-center justify-center"
+            className="min-h-[140px] w-full rounded-md border-2 border-dashed border-gray-400 bg-muted/30 flex flex-wrap gap-5 p-3 items-center justify-center"
             style={{ aspectRatio: "2/1", maxHeight: 160 }}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
@@ -472,10 +493,12 @@ export default function ShouldersPage() {
               }
             }}
           >
-            {diceInHand.map((face, i) => (
+            {diceInHand.map((d, i) => (
               <Die
-                key={`hand-${i}-${face}`}
-                face={face}
+                key={`hand-${i}-${d.face}`}
+                face={d.face}
+                angle={d.angle}
+                offset={d.offset}
                 draggable={rollDisabled}
                 disabled={isGameEnding}
                 onClick={() => moveToBanked(i)}
@@ -497,21 +520,18 @@ export default function ShouldersPage() {
             <Button
               onClick={handleBankDice}
               disabled={bankDisabled || isGameEnding}
-              className="shadow-md border-2 border-b-4 border-gray-700"
             >
               Bank Dice
             </Button>
             <Button
               onClick={handleRoll}
               disabled={rollDisabled || isGameEnding}
-              className="shadow-md border-2 border-b-4 border-gray-700"
             >
               Roll
             </Button>
             <Button
               onClick={handleEndTurn}
               disabled={isGameEnding}
-              className="shadow-md border-2 border-b-4 border-gray-700"
             >
               End Turn
             </Button>
@@ -548,10 +568,12 @@ export default function ShouldersPage() {
               }
             }}
           >
-            {[...bankedDice, ...pendingBanked].map((face, i) => (
+            {[...bankedDice, ...pendingBanked].map((d, i) => (
               <Die
-                key={`banked-${i}-${face}`}
-                face={face}
+                key={`banked-${i}-${d.face}`}
+                face={d.face}
+                angle={i < bankedDice.length ? 0 : d.angle}
+                offset={i < bankedDice.length ? 0 : d.offset}
                 draggable={rollDisabled && i >= bankedDice.length}
                 disabled={isGameEnding}
                 onClick={() => {

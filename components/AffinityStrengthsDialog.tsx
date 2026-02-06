@@ -110,8 +110,8 @@ export function AffinityStrengthsDialog({
               <thead>
                 <tr className="border-b-2 border-border">
                   <th className="p-2 text-left text-text">Affinity</th>
-                  <th className="p-2 text-left text-text">Strong Against:</th>
-                  <th className="p-2 text-left text-text">Weak Against:</th>
+                  <th className="p-2 pl-8 text-left text-text">Strong Against:</th>
+                  <th className="p-2 pl-6 text-left text-text">Weak Against:</th>
                 </tr>
               </thead>
               <tbody>
@@ -139,9 +139,9 @@ export function AffinityStrengthsDialog({
                           </span>
                         </div>
                       </td>
-                      <td className="p-2 text-text">
+                      <td className="p-2 pl-8 text-text">
                         {row.strongAgainst.length > 0 ? (
-                          <div className="flex flex-wrap items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
                             {row.strongAgainst.map((a) => {
                               const strongName = (
                                 a.affinity_name as string
@@ -149,17 +149,17 @@ export function AffinityStrengthsDialog({
                               return (
                                 <div
                                   key={a.id}
-                                  className="flex items-center gap-1"
+                                  className="flex w-28 shrink-0 items-center gap-1"
                                 >
                                   <Image
                                     src={`${CDN_BASE_URL}/${strongName}.jpg`}
                                     alt={a.affinity_name as string}
                                     width={24}
                                     height={24}
-                                    className="h-6 w-6 rounded object-cover"
+                                    className="h-6 w-6 shrink-0 rounded object-cover"
                                     unoptimized
                                   />
-                                  <span>{a.affinity_name as string}</span>
+                                  <span className="truncate">{a.affinity_name as string}</span>
                                 </div>
                               );
                             })}
@@ -168,9 +168,9 @@ export function AffinityStrengthsDialog({
                           "None"
                         )}
                       </td>
-                      <td className="p-2 text-text">
+                      <td className="p-2 pl-6 text-text">
                         {row.weakAgainst.length > 0 ? (
-                          <div className="flex flex-wrap items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
                             {row.weakAgainst.map((a) => {
                               const weakName = (
                                 a.affinity_name as string
@@ -178,17 +178,17 @@ export function AffinityStrengthsDialog({
                               return (
                                 <div
                                   key={a.id}
-                                  className="flex items-center gap-1"
+                                  className="flex w-28 shrink-0 items-center gap-1"
                                 >
                                   <Image
                                     src={`${CDN_BASE_URL}/${weakName}.jpg`}
                                     alt={a.affinity_name as string}
                                     width={24}
                                     height={24}
-                                    className="h-6 w-6 rounded object-cover"
+                                    className="h-6 w-6 shrink-0 rounded object-cover"
                                     unoptimized
                                   />
-                                  <span>{a.affinity_name as string}</span>
+                                  <span className="truncate">{a.affinity_name as string}</span>
                                 </div>
                               );
                             })}
