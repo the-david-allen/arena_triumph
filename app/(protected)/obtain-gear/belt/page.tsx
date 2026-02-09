@@ -65,15 +65,19 @@ function lineMatchesHints(line: boolean[], hints: number[]): boolean {
  * Validate if a nonogram puzzle has a unique solution
  * Uses backtracking to count solutions - returns true if exactly one solution exists
  */
+const UNIQUENESS_MAX_RECURSION = 500000; // Prevent hang from runaway backtracking
+
 function validateGridUniqueness(rowHints: number[][], columnHints: number[][]): boolean {
   const grid: (boolean | null)[][] = Array(GRID_SIZE)
     .fill(null)
     .map(() => Array(GRID_SIZE).fill(null));
   
   let solutionCount = 0;
+  let recursionCount = 0;
   const MAX_SOLUTIONS_TO_CHECK = 2; // Stop after finding 2 solutions
 
   function solve(row: number, col: number): void {
+    if (recursionCount++ > UNIQUENESS_MAX_RECURSION) return;
     // If we've found more than one solution, stop
     if (solutionCount >= MAX_SOLUTIONS_TO_CHECK) return;
 
@@ -168,8 +172,8 @@ function validateGridUniqueness(rowHints: number[][], columnHints: number[][]): 
   // Start solving from top-left
   solve(0, 0);
 
-  // Return true if exactly one solution exists
-  return solutionCount === 1;
+  // Return true only if exactly one solution found and we didn't hit recursion limit
+  return solutionCount === 1 && recursionCount <= UNIQUENESS_MAX_RECURSION;
 }
 
 /**
@@ -185,16 +189,18 @@ function generatePuzzle(): {
   let rowHints: number[][];
   let columnHints: number[][];
   let attempts = 0;
-  const maxAttempts = 100;
+  let totalRunsOfOne = 0;
+  const maxAttempts = 250;
+  const maxRunsOfOne = 14; // Cap total runs of length 1 (relaxed so generation can succeed)
 
   do {
-    // Generate random 12x12 grid with 30-50% fill rate
+    // Generate random 12x12 grid with ~50% fill rate (fewer isolated runs of 1)
     puzzle = Array(GRID_SIZE)
       .fill(null)
       .map(() =>
         Array(GRID_SIZE)
           .fill(false)
-          .map(() => Math.random() < 0.4) // 40% fill rate
+          .map(() => Math.random() < 0.5) // 50% fill rate
       );
 
     // Ensure each row and column has at least one filled cell
@@ -270,13 +276,19 @@ function generatePuzzle(): {
         .map((_, j) => calculateHints(puzzle.map((row) => row[j])));
     }
 
+    // Count total runs of length 1; reject if too many
+    totalRunsOfOne =
+      rowHints.reduce((sum, hints) => sum + hints.filter((h) => h === 1).length, 0) +
+      columnHints.reduce((sum, hints) => sum + hints.filter((h) => h === 1).length, 0);
+
     attempts++;
-    // Continue if we have any empty rows or columns (no hints) OR if puzzle is not unique
+    // Continue if empty rows/columns, not unique, or too many runs of length 1
   } while (
     attempts < maxAttempts &&
-    (rowHints.some((h) => h.length === 0) || 
+    (rowHints.some((h) => h.length === 0) ||
      columnHints.some((h) => h.length === 0) ||
-     !validateGridUniqueness(rowHints, columnHints))
+     !validateGridUniqueness(rowHints, columnHints) ||
+     totalRunsOfOne > maxRunsOfOne)
   );
 
   return { puzzle, rowHints, columnHints };
@@ -305,9 +317,9 @@ export default function BeltPage() {
   const [showRules, setShowRules] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
   const [dragState, setDragState] = React.useState<"green" | "x" | null>(null);
-  const [beltIconPositions, setBeltIconPositions] = React.useState<Set<string>>(new Set());
   const [showSolution, setShowSolution] = React.useState(false);
   const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
+  const [isGenerating, setIsGenerating] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -367,93 +379,34 @@ export default function BeltPage() {
   }, [playerGrid, puzzle, isGameActive, isGameEnding]);
 
   const handlePlayGame = async () => {
-    const userId = await getCurrentUserId();
-    if (userId) {
-      await updatePlayCount(userId);
-      setTodayPlayCount((prev) => (prev !== null ? prev + 1 : null));
-    }
-    const { puzzle: newPuzzle, rowHints: newRowHints, columnHints: newColumnHints } = generatePuzzle();
-    setPuzzle(newPuzzle);
-    setRowHints(newRowHints);
-    setColumnHints(newColumnHints);
-    setPlayerGrid(
-      Array(GRID_SIZE)
-        .fill(null)
-        .map(() => Array(GRID_SIZE).fill(null))
-    );
-    
-    // Calculate belt icon positions for cells adjacent to both vertical and horizontal run length of 1
-    const iconPositions = new Set<string>();
-    for (let row = 0; row < GRID_SIZE; row++) {
-      for (let col = 0; col < GRID_SIZE; col++) {
-        // Check if this cell is false (not part of solution)
-        if (!newPuzzle[row][col]) {
-          // Check if adjacent to a vertical run length of 1
-          let adjacentToVerticalRunOfOne = false;
-          
-          // Check above
-          if (row > 0 && newPuzzle[row - 1][col]) {
-            // Check if the cell above is part of a run of length 1
-            const isRunOfOne = 
-              (row - 1 === 0 || !newPuzzle[row - 2][col]) && // No cell above the run, or it's false
-              (row === GRID_SIZE - 1 || !newPuzzle[row][col]); // No cell below the run, or it's false (current cell)
-            if (isRunOfOne) {
-              adjacentToVerticalRunOfOne = true;
-            }
-          }
-          
-          // Check below
-          if (!adjacentToVerticalRunOfOne && row < GRID_SIZE - 1 && newPuzzle[row + 1][col]) {
-            // Check if the cell below is part of a run of length 1
-            const isRunOfOne = 
-              (row === 0 || !newPuzzle[row - 1][col]) && // No cell above the run, or it's false (current cell)
-              (row + 1 === GRID_SIZE - 1 || !newPuzzle[row + 2][col]); // No cell below the run, or it's false
-            if (isRunOfOne) {
-              adjacentToVerticalRunOfOne = true;
-            }
-          }
-          
-          // Check if adjacent to a horizontal run length of 1
-          let adjacentToHorizontalRunOfOne = false;
-          
-          // Check left
-          if (col > 0 && newPuzzle[row][col - 1]) {
-            // Check if the cell to the left is part of a run of length 1
-            const isRunOfOne = 
-              (col - 1 === 0 || !newPuzzle[row][col - 2]) && // No cell left of the run, or it's false
-              (col === GRID_SIZE - 1 || !newPuzzle[row][col]); // No cell right of the run, or it's false (current cell)
-            if (isRunOfOne) {
-              adjacentToHorizontalRunOfOne = true;
-            }
-          }
-          
-          // Check right
-          if (!adjacentToHorizontalRunOfOne && col < GRID_SIZE - 1 && newPuzzle[row][col + 1]) {
-            // Check if the cell to the right is part of a run of length 1
-            const isRunOfOne = 
-              (col === 0 || !newPuzzle[row][col - 1]) && // No cell left of the run, or it's false (current cell)
-              (col + 1 === GRID_SIZE - 1 || !newPuzzle[row][col + 2]); // No cell right of the run, or it's false
-            if (isRunOfOne) {
-              adjacentToHorizontalRunOfOne = true;
-            }
-          }
-          
-          // If adjacent to both, place icon
-          if (adjacentToVerticalRunOfOne && adjacentToHorizontalRunOfOne) {
-            iconPositions.add(`${row}-${col}`);
-          }
-        }
+    setIsGenerating(true);
+    try {
+      const userId = await getCurrentUserId();
+      if (userId) {
+        await updatePlayCount(userId);
+        setTodayPlayCount((prev) => (prev !== null ? prev + 1 : null));
       }
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const { puzzle: newPuzzle, rowHints: newRowHints, columnHints: newColumnHints } = generatePuzzle();
+      setPuzzle(newPuzzle);
+      setRowHints(newRowHints);
+      setColumnHints(newColumnHints);
+      setPlayerGrid(
+        Array(GRID_SIZE)
+          .fill(null)
+          .map(() => Array(GRID_SIZE).fill(null))
+      );
+
+      setTimer(0);
+      setIsGameActive(true);
+      setIsGameEnding(false);
+      setShowCompletionScreen(false);
+      setRewardBelt(null);
+      setFinalSeconds(0);
+      setShowSolution(false);
+    } finally {
+      setIsGenerating(false);
     }
-    setBeltIconPositions(iconPositions);
-    
-    setTimer(0);
-    setIsGameActive(true);
-    setIsGameEnding(false);
-    setShowCompletionScreen(false);
-    setRewardBelt(null);
-    setFinalSeconds(0);
-    setShowSolution(false);
   };
 
   const handleCellClick = (row: number, col: number, isRightClick: boolean = false) => {
@@ -647,11 +600,14 @@ Left click on a square to make it dark green. Right click to mark with X. Click 
         <Button
           onClick={() => void handlePlayGame()}
           disabled={
+            isGenerating ||
             isGameActive ||
             (todayPlayCount !== null && todayPlayCount >= 3)
           }
         >
-          {todayPlayCount !== null && todayPlayCount >= 3
+          {isGenerating
+            ? "Generating…"
+            : todayPlayCount !== null && todayPlayCount >= 3
             ? "No plays remaining today"
             : "Play Game"}
         </Button>
@@ -767,7 +723,6 @@ Left click on a square to make it dark green. Right click to mark with X. Click 
                         .fill(null)
                         .map((_, colIndex) => {
                           const cellState = playerGrid[rowIndex][colIndex];
-                          const hasBeltIcon = beltIconPositions.has(`${rowIndex}-${colIndex}`);
                           const solutionValue = puzzle ? puzzle[rowIndex][colIndex] : null;
                           return (
                             <div
@@ -815,16 +770,6 @@ Left click on a square to make it dark green. Right click to mark with X. Click 
                               )}
                               {!showSolution && cellState === false && (
                                 <span className="text-gray-700 font-bold text-lg">✕</span>
-                              )}
-                              {!showSolution && hasBeltIcon && cellState === null && (
-                                <Image
-                                  src="https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/slots/belt.jpg"
-                                  alt="Belt hint"
-                                  width={40}
-                                  height={40}
-                                  className="w-full h-full object-contain"
-                                  unoptimized
-                                />
                               )}
                             </div>
                           );
