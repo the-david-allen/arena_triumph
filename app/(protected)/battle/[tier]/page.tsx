@@ -17,6 +17,10 @@ import { CombatantArea } from "@/components/battle/CombatantArea";
 import { FightStatusDisplay } from "@/components/battle/FightStatusDisplay";
 import { DebugWindow } from "@/components/battle/DebugWindow";
 import type { ZoneType } from "@/components/battle/HitBar";
+import { BACKGROUND_MUSIC_VOLUME } from "@/lib/sounds";
+
+const BATTLE_BACKGROUND_MUSIC_URL =
+  "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/sounds/battle_background.mp3";
 
 type FightPhase =
   | "loading"
@@ -54,6 +58,42 @@ export default function BattleTierPage() {
   const userIdRef = useRef<string | null>(null);
   const hasUpdatedHasFoughtRef = useRef(false);
   const bossTurnProcessedRef = useRef(false);
+  const battleAudioRef = useRef<HTMLAudioElement | null>(null);
+  const battleMusicStartedRef = useRef(false);
+
+  useEffect(() => {
+    if (phase === "player_turn" || phase === "boss_turn") {
+      if (battleMusicStartedRef.current) return;
+      battleMusicStartedRef.current = true;
+      const audio = new Audio(BATTLE_BACKGROUND_MUSIC_URL);
+      audio.volume = BACKGROUND_MUSIC_VOLUME;
+      audio.loop = true;
+      audio.play().catch((err) =>
+        console.warn("Battle music failed to play:", err)
+      );
+      battleAudioRef.current = audio;
+    }
+    if (phase === "player_wins" || phase === "boss_wins") {
+      const audio = battleAudioRef.current;
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+        battleAudioRef.current = null;
+      }
+      battleMusicStartedRef.current = false;
+    }
+  }, [phase]);
+
+  useEffect(() => {
+    return () => {
+      const audio = battleAudioRef.current;
+      if (audio) {
+        audio.pause();
+        battleAudioRef.current = null;
+      }
+      battleMusicStartedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!showLevelUp) return;

@@ -18,11 +18,15 @@ import {
   addToInventory,
 } from "@/lib/belt-game";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
+import { BACKGROUND_MUSIC_VOLUME } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 const GRID_SIZE = 12;
+
+const BELT_BACKGROUND_MUSIC_URL =
+  "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/sounds/belt_background.mp3";
 
 type CellState = null | true | false; // null = empty, true = dark green, false = X
 
@@ -191,7 +195,7 @@ function generatePuzzle(): {
   let attempts = 0;
   let totalRunsOfOne = 0;
   const maxAttempts = 250;
-  const maxRunsOfOne = 14; // Cap total runs of length 1 (relaxed so generation can succeed)
+  const maxRunsOfOne = 20; // Cap total runs of length 1 (relaxed so generation can succeed)
 
   do {
     // Generate random 12x12 grid with ~50% fill rate (fewer isolated runs of 1)
@@ -200,7 +204,7 @@ function generatePuzzle(): {
       .map(() =>
         Array(GRID_SIZE)
           .fill(false)
-          .map(() => Math.random() < 0.5) // 50% fill rate
+          .map(() => Math.random() < 0.55) // 50% fill rate
       );
 
     // Ensure each row and column has at least one filled cell
@@ -336,6 +340,7 @@ export default function BeltPage() {
   const mouseMovedRef = React.useRef(false);
   const mouseDownCellRef = React.useRef<{ row: number; col: number } | null>(null);
   const timerIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
+  const beltMusicRef = React.useRef<HTMLAudioElement | null>(null);
 
   // Timer effect
   React.useEffect(() => {
@@ -356,6 +361,24 @@ export default function BeltPage() {
       }
     };
   }, [isGameActive, isGameEnding]);
+
+  // Stop belt background music when game ends
+  React.useEffect(() => {
+    if (!isGameActive && beltMusicRef.current) {
+      beltMusicRef.current.pause();
+      beltMusicRef.current.currentTime = 0;
+    }
+  }, [isGameActive]);
+
+  // Cleanup: pause belt music on unmount
+  React.useEffect(() => {
+    return () => {
+      if (beltMusicRef.current) {
+        beltMusicRef.current.pause();
+        beltMusicRef.current.currentTime = 0;
+      }
+    };
+  }, []);
 
   // Check if puzzle is solved
   React.useEffect(() => {
@@ -404,6 +427,21 @@ export default function BeltPage() {
       setRewardBelt(null);
       setFinalSeconds(0);
       setShowSolution(false);
+
+      // Start belt background music (same user gesture as Play Game)
+      try {
+        if (!beltMusicRef.current) {
+          const audio = new Audio(BELT_BACKGROUND_MUSIC_URL);
+          audio.volume = BACKGROUND_MUSIC_VOLUME;
+          audio.loop = true;
+          beltMusicRef.current = audio;
+        }
+        const music = beltMusicRef.current;
+        music.currentTime = 0;
+        void music.play();
+      } catch {
+        // Autoplay blocked or SSR - fail silently
+      }
     } finally {
       setIsGenerating(false);
     }

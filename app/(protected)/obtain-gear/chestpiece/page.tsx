@@ -13,6 +13,7 @@ import { Card, CardData } from "@/components/chestpiece/Card";
 import { GameSlot } from "@/components/chestpiece/GameSlot";
 import { fetchChestGameCards, updatePlayCount, getCurrentUserId, updateTopScores, getRewardRarity, getRandomChestByRarity, addToInventory } from "@/lib/chestpiece-game";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
+import { playChestBackgroundMusic, stopChestBackgroundMusic } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
@@ -94,6 +95,17 @@ export default function ChestpiecePage() {
       cancelled = true;
     };
   }, []);
+
+  // Chest game background music: play when game is active, stop when game ends or unmount
+  React.useEffect(() => {
+    if (isGameActive && !showCompletionScreen) {
+      playChestBackgroundMusic();
+      return () => stopChestBackgroundMusic();
+    }
+    if (showCompletionScreen) {
+      stopChestBackgroundMusic();
+    }
+  }, [isGameActive, showCompletionScreen]);
 
   // #region agent log
   React.useEffect(() => {

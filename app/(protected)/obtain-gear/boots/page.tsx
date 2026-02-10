@@ -18,9 +18,13 @@ import {
   addToInventory,
 } from "@/lib/boots-game";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
+import { BACKGROUND_MUSIC_VOLUME } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+
+const BOOTS_BACKGROUND_MUSIC_URL =
+  "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/sounds/boots_background.mp3";
 
 const GRID_SIZE = 20;
 const NUM_MINES = 45;
@@ -139,6 +143,7 @@ export default function BootsPage() {
   const [showRules, setShowRules] = React.useState(false);
   const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
   const timerIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const bootsMusicRef = React.useRef<HTMLAudioElement | null>(null);
   const router = useRouter();
 
   React.useEffect(() => {
@@ -174,6 +179,24 @@ export default function BootsPage() {
       }
     };
   }, [isGameActive, mineMap, isGameEnding]);
+
+  // Stop boots background music when game ends
+  React.useEffect(() => {
+    if (!isGameActive && bootsMusicRef.current) {
+      bootsMusicRef.current.pause();
+      bootsMusicRef.current.currentTime = 0;
+    }
+  }, [isGameActive]);
+
+  // Cleanup: pause boots music on unmount
+  React.useEffect(() => {
+    return () => {
+      if (bootsMusicRef.current) {
+        bootsMusicRef.current.pause();
+        bootsMusicRef.current.currentTime = 0;
+      }
+    };
+  }, []);
 
   // Win condition: all 355 non-mine cells revealed
   const totalRevealed = revealed.flat().filter(Boolean).length;
@@ -226,6 +249,21 @@ export default function BootsPage() {
     setShowCompletionScreen(false);
     setRewardBoots(null);
     setFinalSeconds(0);
+
+    // Start boots background music (same user gesture as Play Game)
+    try {
+      if (!bootsMusicRef.current) {
+        const audio = new Audio(BOOTS_BACKGROUND_MUSIC_URL);
+        audio.volume = BACKGROUND_MUSIC_VOLUME;
+        audio.loop = true;
+        bootsMusicRef.current = audio;
+      }
+      const music = bootsMusicRef.current;
+      music.currentTime = 0;
+      void music.play();
+    } catch {
+      // Autoplay blocked or SSR - fail silently
+    }
   };
 
   const handleFirstClick = (row: number, col: number) => {
