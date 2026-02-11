@@ -202,6 +202,25 @@ export default function HelmPage() {
     return true;
   };
 
+  /** Compute final score from a grid (used so endgame score includes the latest placement). */
+  const getScoreFromGrid = (gridToCheck: (number | null)[][]): number => {
+    let strengthSum = 0;
+    let encumberanceSum = 0;
+    for (let col = 0; col < 6; col++) {
+      let columnHasValue = false;
+      for (const value of gridToCheck[col]) {
+        if (value !== null) {
+          strengthSum += value;
+          columnHasValue = true;
+        }
+      }
+      if (columnHasValue) {
+        encumberanceSum += ENCUMBERANCE_VALUE;
+      }
+    }
+    return strengthSum + encumberanceSum;
+  };
+
   const handlePlaceValue = () => {
     if (selectedNumberedDieIndex === null || selectedSlotDieIndex === null || !diceRoll) {
       return;
@@ -249,10 +268,10 @@ export default function HelmPage() {
       setGreyColumns((prev) => new Set(prev).add(columnIndex));
     }
 
-    // Check if all columns have a 6 value - if so, trigger endgame
+    // Check if all columns have a 6 value - if so, trigger endgame (pass newGrid so last 6 is in score)
     if (allColumnsHaveSix(newGrid)) {
       setIsGameEnding(true);
-      handleGameEnd();
+      handleGameEnd(newGrid);
       // Don't clear dice/selections since game is ending
       return;
     }
@@ -300,9 +319,10 @@ export default function HelmPage() {
     }
   };
 
-  const handleGameEnd = async () => {
-    // Calculate final score from current state
-    const score = strength + encumberance;
+  const handleGameEnd = async (gridAtEnd?: (number | null)[][]) => {
+    // Use grid if provided (e.g. when ending via all columns have six) so the last placement is included
+    const score =
+      gridAtEnd !== undefined ? getScoreFromGrid(gridAtEnd) : strength + encumberance;
     setFinalScore(score);
 
     // Wait 2 seconds

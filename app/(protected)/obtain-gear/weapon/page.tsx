@@ -417,8 +417,9 @@ export default function WeaponPage() {
     setRollJustClicked(false); // Re-enable Roll button after placing
   };
 
-  // Handle clicking dice area to select (for 2 highlighted columns case)
+  // Handle clicking dice area to select (for 2 highlighted columns case) — only after roll, before place
   const handleDiceAreaClick = (area: "rolled" | "separated") => {
+    if (placeJustClicked) return; // After placing, ignore clicks until they roll again
     if (rolledDice.length !== 2 || separatedDice.length !== 2) return;
     
     const highlightedCount = countHighlightedColumns();
@@ -615,6 +616,14 @@ export default function WeaponPage() {
     return highlightedDiceArea !== null;
   }, [rolledDice, separatedDice, highlightedDiceArea, gridState, placeJustClicked]);
 
+  // Show "Select which set of dice to place." only after roll and before place (2 highlighted columns, no selection yet)
+  const showSelectDiceMessage = React.useMemo(() => {
+    if (placeJustClicked) return false; // After placing, don't show until they roll again
+    if (rolledDice.length !== 2 || separatedDice.length !== 2) return false;
+    if (highlightedDiceArea !== null) return false;
+    return countHighlightedColumns() === 2;
+  }, [placeJustClicked, rolledDice, separatedDice, highlightedDiceArea, gridState]);
+
   // Show completion screen
   if (showCompletionScreen) {
     return (
@@ -706,6 +715,9 @@ export default function WeaponPage() {
                   </Button>
                   {noPlacementMessage && (
                     <span className="text-red-600 font-semibold text-sm text-center">{noPlacementMessage}</span>
+                  )}
+                  {showSelectDiceMessage && (
+                    <span className="font-bold text-sm text-center">Select which set of dice to place.</span>
                   )}
                 </div>
               </div>

@@ -494,7 +494,6 @@ Try to guess in as few rounds as possible.  Good luck!`;
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center gap-1">
-                      <span>Strong against:</span>
                       {round.guess[round.highlightedTileIndex] && (
                         <Image
                           src={`${CDN_BASE_URL}/${(round.guess[round.highlightedTileIndex]!.affinity_name as string).toLowerCase()}.jpg`}
@@ -505,10 +504,10 @@ Try to guess in as few rounds as possible.  Good luck!`;
                           unoptimized
                         />
                       )}
+                      <span> is strong against: </span>
                       <span>{round.feedback.strongAgainst}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span>Weak against:</span>
                       {round.guess[round.highlightedTileIndex] && (
                         <Image
                           src={`${CDN_BASE_URL}/${(round.guess[round.highlightedTileIndex]!.affinity_name as string).toLowerCase()}.jpg`}
@@ -519,6 +518,7 @@ Try to guess in as few rounds as possible.  Good luck!`;
                           unoptimized
                         />
                       )}
+                      <span> is weak against: </span>
                       <span>{round.feedback.weakAgainst}</span>
                     </div>
                   </div>
