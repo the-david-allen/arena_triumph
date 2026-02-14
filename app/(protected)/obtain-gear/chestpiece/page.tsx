@@ -12,6 +12,7 @@ import {
 import { Card, CardData } from "@/components/chestpiece/Card";
 import { GameSlot } from "@/components/chestpiece/GameSlot";
 import { fetchChestGameCards, updatePlayCount, getCurrentUserId, updateTopScores, getRewardRarity, getRandomChestByRarity, addToInventory } from "@/lib/chestpiece-game";
+import { checkUserHasItem, addXpToUser, RARITY_XP } from "@/lib/inventory";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
 import { playChestBackgroundMusic, stopChestBackgroundMusic } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
@@ -80,7 +81,8 @@ export default function ChestpiecePage() {
   const [slotBonusActive, setSlotBonusActive] = React.useState<Set<string>>(new Set());
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [showCompletionScreen, setShowCompletionScreen] = React.useState(false);
-  const [rewardChestpiece, setRewardChestpiece] = React.useState<{ id: string; name: string; image_url: string | null } | null>(null);
+  const [rewardChestpiece, setRewardChestpiece] = React.useState<{ id: string; name: string; image_url: string | null; rarity: string } | null>(null);
+  const [rewardXp, setRewardXp] = React.useState<number | null>(null);
   const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
 
   React.useEffect(() => {
@@ -212,8 +214,17 @@ export default function ChestpiecePage() {
         if (rarity) {
           const chestpiece = await getRandomChestByRarity(rarity);
           if (chestpiece) {
-            await addToInventory(userId, chestpiece.id);
-            setRewardChestpiece(chestpiece);
+            const alreadyHas = await checkUserHasItem(userId, chestpiece.id);
+            if (alreadyHas) {
+              const xpVal = RARITY_XP[chestpiece.rarity] ?? RARITY_XP.Base ?? 1;
+              await addXpToUser(userId, xpVal);
+              setRewardXp(xpVal);
+              setRewardChestpiece(null);
+            } else {
+              await addToInventory(userId, chestpiece.id);
+              setRewardChestpiece(chestpiece);
+              setRewardXp(null);
+            }
           }
         }
       }
@@ -383,6 +394,7 @@ export default function ChestpiecePage() {
   const handleResetGame = () => {
     setShowCompletionScreen(false);
     setRewardChestpiece(null);
+    setRewardXp(null);
     setIsGameActive(false);
     setCurrentScore(0);
     setHighlightedLines(new Set());
@@ -406,6 +418,13 @@ export default function ChestpiecePage() {
     setDiscardPile([]);
     setFinalScore(0);
   };
+
+  React.useEffect(() => {
+    if (showCompletionScreen && (rewardChestpiece || rewardXp !== null)) {
+      const audio = new Audio("https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/sounds/tada.mp3");
+      audio.play().catch(() => {});
+    }
+  }, [showCompletionScreen, rewardChestpiece, rewardXp]);
 
   const rulesText = `Click the top card of the deck to reveal the next card which you may play into a slot or drag to the Discard pile.  The game ends when all slots are filled or the deck is empty.
 
@@ -440,6 +459,11 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
                   />
                 </div>
               )}
+            </div>
+          )}
+          {rewardXp !== null && (
+            <div className="pt-4 border-t">
+              <p className="text-xl font-semibold text-primary">{rewardXp} xp gained</p>
             </div>
           )}
           <Button onClick={() => router.push("/obtain-gear")} className="mt-4">Ok</Button>

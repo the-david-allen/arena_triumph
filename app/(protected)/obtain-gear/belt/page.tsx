@@ -17,7 +17,11 @@ import {
   getRandomBeltByRarity,
   addToInventory,
 } from "@/lib/belt-game";
-import { generateBeltPuzzle } from "@/lib/belt-nonogram-generator";
+import { checkUserHasItem, addXpToUser, RARITY_XP } from "@/lib/inventory";
+import {
+  generateBeltPuzzle,
+  type PuzzleDifficulty,
+} from "@/lib/belt-nonogram-generator";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
 import { BACKGROUND_MUSIC_VOLUME } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
@@ -49,14 +53,21 @@ export default function BeltPage() {
     id: string;
     name: string;
     image_url: string | null;
+    rarity: string;
   } | null>(null);
+  const [rewardXp, setRewardXp] = React.useState<number | null>(null);
   const [finalSeconds, setFinalSeconds] = React.useState(0);
   const [showRules, setShowRules] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
   const [dragState, setDragState] = React.useState<"green" | "x" | null>(null);
   const [showSolution, setShowSolution] = React.useState(false);
+  const [puzzleDifficulty, setPuzzleDifficulty] =
+    React.useState<PuzzleDifficulty | null>(null);
   const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
   const [isGenerating, setIsGenerating] = React.useState(false);
+  const [generationError, setGenerationError] = React.useState<string | null>(
+    null
+  );
 
   React.useEffect(() => {
     let cancelled = false;
@@ -135,19 +146,26 @@ export default function BeltPage() {
   }, [playerGrid, puzzle, isGameActive, isGameEnding]);
 
   const handlePlayGame = async () => {
+    setGenerationError(null);
     setIsGenerating(true);
     try {
       const userId = await getCurrentUserId();
+      const {
+        puzzle: newPuzzle,
+        rowHints: newRowHints,
+        columnHints: newColumnHints,
+        difficulty: newDifficulty,
+      } = generateBeltPuzzle();
+
       if (userId) {
         await updatePlayCount(userId);
         setTodayPlayCount((prev) => (prev !== null ? prev + 1 : null));
       }
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      const { puzzle: newPuzzle, rowHints: newRowHints, columnHints: newColumnHints } =
-        generateBeltPuzzle();
+
       setPuzzle(newPuzzle);
       setRowHints(newRowHints);
       setColumnHints(newColumnHints);
+      setPuzzleDifficulty(newDifficulty);
       setPlayerGrid(
         Array(GRID_SIZE)
           .fill(null)
@@ -159,6 +177,7 @@ export default function BeltPage() {
       setIsGameEnding(false);
       setShowCompletionScreen(false);
       setRewardBelt(null);
+      setRewardXp(null);
       setFinalSeconds(0);
       setShowSolution(false);
 
@@ -178,7 +197,7 @@ export default function BeltPage() {
       }
     } catch (error) {
       console.error("Failed to generate puzzle:", error);
-      // User can click Play Game again; finally will clear isGenerating
+      setGenerationError("Game failed to generate.");
     } finally {
       setIsGenerating(false);
     }
@@ -297,8 +316,17 @@ export default function BeltPage() {
         if (rarity) {
           const belt = await getRandomBeltByRarity(rarity);
           if (belt) {
-            await addToInventory(userId, belt.id);
-            setRewardBelt(belt);
+            const alreadyHas = await checkUserHasItem(userId, belt.id);
+            if (alreadyHas) {
+              const xpVal = RARITY_XP[belt.rarity] ?? RARITY_XP.Base ?? 1;
+              await addXpToUser(userId, xpVal);
+              setRewardXp(xpVal);
+              setRewardBelt(null);
+            } else {
+              await addToInventory(userId, belt.id);
+              setRewardBelt(belt);
+              setRewardXp(null);
+            }
           }
         }
       }
@@ -314,6 +342,7 @@ export default function BeltPage() {
   const handleResetGame = () => {
     setShowCompletionScreen(false);
     setRewardBelt(null);
+    setRewardXp(null);
     setFinalSeconds(0);
     setIsGameActive(false);
     setIsGameEnding(false);
@@ -325,6 +354,13 @@ export default function BeltPage() {
     setTimer(0);
     setPuzzle(null);
   };
+
+  React.useEffect(() => {
+    if (showCompletionScreen && (rewardBelt || rewardXp !== null)) {
+      const audio = new Audio("https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/sounds/tada.mp3");
+      audio.play().catch(() => {});
+    }
+  }, [showCompletionScreen, rewardBelt, rewardXp]);
 
   const rulesText = `You have a grid of squares, which must be either filled in dark green or marked with X. Beside each row of the grid are listed the lengths of the runs of dark green squares on that row. Above each column are listed the lengths of the runs of dark green squares in that column. Your aim is to find all dark green squares.
 
@@ -354,6 +390,11 @@ Left click on a square to make it dark green. Right click to mark with X. Click 
                   />
                 </div>
               )}
+            </div>
+          )}
+          {rewardXp !== null && (
+            <div className="pt-4 border-t">
+              <p className="text-xl font-semibold text-primary">{rewardXp} xp gained</p>
             </div>
           )}
           <Button onClick={() => router.push("/obtain-gear")} className="mt-4">
@@ -391,21 +432,52 @@ Left click on a square to make it dark green. Right click to mark with X. Click 
         </Button>
       </div>
 
+      {generationError && (
+        <p className="text-center text-destructive font-medium">
+          {generationError}
+        </p>
+      )}
+
       {/* Game board */}
       {isGameActive && (
         <div className="space-y-4">
           {/* Timer and Reveal Button */}
-          <div className="flex items-center justify-center gap-4">
-            <div className="text-2xl font-bold">
-              Time: {timer} seconds
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center justify-center gap-4">
+              <div className="text-2xl font-bold">
+                Time: {timer} seconds
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowSolution(!showSolution)}
+                size="sm"
+              >
+                {showSolution ? "Hide Solution" : "Reveal Solution"}
+              </Button>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowSolution(!showSolution)}
-              size="sm"
-            >
-              {showSolution ? "Hide Solution" : "Reveal Solution"}
-            </Button>
+            {showSolution && puzzleDifficulty && (
+              <div className="rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 text-sm">
+                <div className="font-semibold text-gray-700 mb-1">
+                  Puzzle difficulty
+                </div>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 text-gray-600">
+                  <span>minRounds:</span>
+                  <span className="font-mono">{puzzleDifficulty.rounds}</span>
+                  <span>minLineUpdates:</span>
+                  <span className="font-mono">
+                    {puzzleDifficulty.lineUpdates}
+                  </span>
+                  <span>maxFirstRoundCellsSet:</span>
+                  <span className="font-mono">
+                    {puzzleDifficulty.firstRoundCellsSet}
+                  </span>
+                  <span>minMaxLineCandidatesSeen:</span>
+                  <span className="font-mono">
+                    {puzzleDifficulty.maxLineCandidatesSeen}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Nonogram Grid */}

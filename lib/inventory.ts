@@ -78,6 +78,66 @@ export async function getCurrentUserId(): Promise<string | null> {
   return user.id;
 }
 
+/**
+ * Checks if the user already has an item in their inventory
+ */
+export async function checkUserHasItem(
+  userId: string,
+  gearId: string
+): Promise<boolean> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("user_inventory")
+    .select("gear_id")
+    .eq("user_id", userId)
+    .eq("gear_id", gearId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error checking user inventory:", error);
+    return false;
+  }
+  return data !== null;
+}
+
+/**
+ * Adds XP to user without deleting any item (for duplicate reward case)
+ */
+export async function addXpToUser(
+  userId: string,
+  xpVal: number
+): Promise<void> {
+  const supabase = createClient();
+
+  const { data: profile, error: fetchError } = await supabase
+    .from("user_profiles")
+    .select("xp, level")
+    .eq("id", userId)
+    .single();
+
+  if (fetchError || !profile) {
+    console.error("Error fetching user profile:", fetchError);
+    throw new Error(
+      `Failed to update XP: ${fetchError?.message ?? "Profile not found"}`
+    );
+  }
+
+  const newXp = (profile.xp ?? 0) + xpVal;
+  const currentLevel = profile.level ?? 1;
+
+  const { error: updateError } = await supabase
+    .from("user_profiles")
+    .update({ xp: newXp })
+    .eq("id", userId);
+
+  if (updateError) {
+    console.error("Error updating XP:", updateError);
+    throw new Error(`Failed to update XP: ${updateError.message}`);
+  }
+
+  await checkAndUpdateLevel(supabase, userId, newXp, currentLevel);
+}
+
 async function fetchGearFromLookup(
   gearId: string,
   gearType: string

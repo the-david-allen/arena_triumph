@@ -131,6 +131,7 @@ export async function updatePlayCount(userId: string): Promise<void> {
         gear_type: gearType,
         today_play_count: 1,
         total_play_count: 1,
+        has_claimed_reward: false,
       });
 
     if (insertError) {
@@ -259,13 +260,13 @@ export async function getRewardRarity(rounds: number): Promise<string | null> {
  * Gets a random leggings by rarity
  * Queries leggings_lookup and randomly selects one leggings
  */
-export async function getRandomLeggingsByRarity(rarity: string): Promise<{ id: string; name: string; image_url: string | null } | null> {
+export async function getRandomLeggingsByRarity(rarity: string): Promise<{ id: string; name: string; image_url: string | null; rarity: string } | null> {
   const supabase = createClient();
 
   try {
     const { data, error } = await supabase
       .from("leggings_lookup")
-      .select("id, name, image_url")
+      .select("id, name, image_url, rarity")
       .eq("rarity", rarity);
 
     if (error) {
@@ -285,6 +286,7 @@ export async function getRandomLeggingsByRarity(rarity: string): Promise<{ id: s
       id: selected.id,
       name: selected.name,
       image_url: selected.image_url,
+      rarity: selected.rarity ?? "Base",
     };
   } catch (error) {
     console.error("Error in getRandomLeggingsByRarity:", error);

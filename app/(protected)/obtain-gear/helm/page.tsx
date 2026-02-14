@@ -17,6 +17,7 @@ import {
   getRandomHelmByRarity,
   addToInventory,
 } from "@/lib/helm-game";
+import { checkUserHasItem, addXpToUser, RARITY_XP } from "@/lib/inventory";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
 import { playDiceRollSound } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
@@ -64,7 +65,8 @@ export default function HelmPage() {
   const [greyColumns, setGreyColumns] = React.useState<Set<number>>(new Set());
   const [showRules, setShowRules] = React.useState(false);
   const [showCompletionScreen, setShowCompletionScreen] = React.useState(false);
-  const [rewardHelm, setRewardHelm] = React.useState<{ id: string; name: string; image_url: string | null } | null>(null);
+  const [rewardHelm, setRewardHelm] = React.useState<{ id: string; name: string; image_url: string | null; rarity: string } | null>(null);
+  const [rewardXp, setRewardXp] = React.useState<number | null>(null);
   const [finalScore, setFinalScore] = React.useState(0);
   const [isGameEnding, setIsGameEnding] = React.useState(false);
   const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
@@ -339,8 +341,17 @@ export default function HelmPage() {
         if (rarity) {
           const helm = await getRandomHelmByRarity(rarity);
           if (helm) {
-            await addToInventory(userId, helm.id);
-            setRewardHelm(helm);
+            const alreadyHas = await checkUserHasItem(userId, helm.id);
+            if (alreadyHas) {
+              const xpVal = RARITY_XP[helm.rarity] ?? RARITY_XP.Base ?? 1;
+              await addXpToUser(userId, xpVal);
+              setRewardXp(xpVal);
+              setRewardHelm(null);
+            } else {
+              await addToInventory(userId, helm.id);
+              setRewardHelm(helm);
+              setRewardXp(null);
+            }
           }
         }
       }
@@ -356,6 +367,7 @@ export default function HelmPage() {
   const handleResetGame = () => {
     setShowCompletionScreen(false);
     setRewardHelm(null);
+    setRewardXp(null);
     setFinalScore(0);
     setIsGameActive(false);
     setStrength(0);
@@ -394,6 +406,14 @@ export default function HelmPage() {
 
 Also, each piece of equipment you use (meaning you have 1 or more cells filled in that column) weighs you down with some Encumberance.`;
 
+  // Play tada sound when showing item reward
+  React.useEffect(() => {
+    if (showCompletionScreen && rewardHelm) {
+      const audio = new Audio("https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/sounds/tada.mp3");
+      audio.play().catch(() => {});
+    }
+  }, [showCompletionScreen, rewardHelm]);
+
   // Show completion screen
   if (showCompletionScreen) {
     return (
@@ -418,6 +438,11 @@ Also, each piece of equipment you use (meaning you have 1 or more cells filled i
                   />
                 </div>
               )}
+            </div>
+          )}
+          {rewardXp !== null && (
+            <div className="pt-4 border-t">
+              <p className="text-xl font-semibold text-primary">{rewardXp} xp gained</p>
             </div>
           )}
           <Button onClick={() => router.push("/obtain-gear")} className="mt-4">

@@ -19,6 +19,7 @@ import {
   updateTopScores,
   type ShouldersReward,
 } from "@/lib/shoulders-game";
+import { checkUserHasItem, addXpToUser, RARITY_XP } from "@/lib/inventory";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
 import { playDiceRollSound } from "@/lib/sounds";
 import {
@@ -211,6 +212,7 @@ export default function ShouldersPage() {
   const [showCompletionScreen, setShowCompletionScreen] = React.useState(false);
   const [finalScore, setFinalScore] = React.useState(0);
   const [rewardItem, setRewardItem] = React.useState<ShouldersReward | null>(null);
+  const [rewardXp, setRewardXp] = React.useState<number | null>(null);
   const [strikeFromRoll, setStrikeFromRoll] = React.useState(false);
   const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
   const suppressClickAfterDropToBankedRef = React.useRef(false);
@@ -260,6 +262,7 @@ export default function ShouldersPage() {
     setShowCompletionScreen(false);
     setFinalScore(0);
     setRewardItem(null);
+    setRewardXp(null);
     setStrikeFromRoll(false);
   }, []);
 
@@ -336,8 +339,17 @@ export default function ShouldersPage() {
         if (rarity) {
           const item = await getRandomShouldersByRarity(rarity);
           if (item) {
-            await addToInventory(userId, item.id);
-            setRewardItem(item);
+            const alreadyHas = await checkUserHasItem(userId, item.id);
+            if (alreadyHas) {
+              const xpVal = RARITY_XP[item.rarity] ?? RARITY_XP.Base ?? 1;
+              await addXpToUser(userId, xpVal);
+              setRewardXp(xpVal);
+              setRewardItem(null);
+            } else {
+              await addToInventory(userId, item.id);
+              setRewardItem(item);
+              setRewardXp(null);
+            }
           }
         }
       }
@@ -379,8 +391,16 @@ export default function ShouldersPage() {
   const handleResetAfterComplete = React.useCallback(() => {
     setShowCompletionScreen(false);
     setRewardItem(null);
+    setRewardXp(null);
     setFinalScore(0);
   }, []);
+
+  React.useEffect(() => {
+    if (showCompletionScreen && (rewardItem || rewardXp !== null)) {
+      const audio = new Audio("https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/sounds/tada.mp3");
+      audio.play().catch(() => {});
+    }
+  }, [showCompletionScreen, rewardItem, rewardXp]);
 
   if (showCompletionScreen) {
     return (
@@ -407,6 +427,11 @@ export default function ShouldersPage() {
                   />
                 </div>
               )}
+            </div>
+          )}
+          {rewardXp !== null && (
+            <div className="pt-4 border-t">
+              <p className="text-xl font-semibold text-primary">{rewardXp} xp gained</p>
             </div>
           )}
           <Button onClick={() => router.push("/obtain-gear")} className="mt-4">

@@ -19,6 +19,7 @@ import {
   updateTopScores,
   type GauntletsReward,
 } from "@/lib/gauntlets-game";
+import { checkUserHasItem, addXpToUser, RARITY_XP } from "@/lib/inventory";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
 import { useRouter } from "next/navigation";
 
@@ -126,6 +127,7 @@ export default function GauntletsPage() {
   const [showCompletionScreen, setShowCompletionScreen] = React.useState(false);
   const [finalSeconds, setFinalSeconds] = React.useState(0);
   const [rewardGauntlets, setRewardGauntlets] = React.useState<GauntletsReward | null>(null);
+  const [rewardXp, setRewardXp] = React.useState<number | null>(null);
   const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
   const router = useRouter();
 
@@ -210,8 +212,17 @@ export default function GauntletsPage() {
           if (rarity) {
             const gauntlets = await getRandomGauntletsByRarity(rarity);
             if (gauntlets) {
-              await addToInventory(userId, gauntlets.id);
-              setRewardGauntlets(gauntlets);
+              const alreadyHas = await checkUserHasItem(userId, gauntlets.id);
+              if (alreadyHas) {
+                const xpVal = RARITY_XP[gauntlets.rarity] ?? RARITY_XP.Base ?? 1;
+                await addXpToUser(userId, xpVal);
+                setRewardXp(xpVal);
+                setRewardGauntlets(null);
+              } else {
+                await addToInventory(userId, gauntlets.id);
+                setRewardGauntlets(gauntlets);
+                setRewardXp(null);
+              }
             }
           }
         }
@@ -435,6 +446,7 @@ export default function GauntletsPage() {
     setIsGameEnding(false);
     isGameEndingRef.current = false;
     setRewardGauntlets(null);
+    setRewardXp(null);
     setFinalSeconds(0);
     elapsedRef.current = 0;
     lastSecondRef.current = 0;
@@ -510,6 +522,13 @@ export default function GauntletsPage() {
   const rulesText =
     "Hello Tavernkeeper.  Fill the mugs and provide the patrons with their drinks and do not let them get to the kegs while still thirsty.  Good luck!";
 
+  React.useEffect(() => {
+    if (showCompletionScreen && (rewardGauntlets || rewardXp !== null)) {
+      const audio = new Audio("https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/sounds/tada.mp3");
+      audio.play().catch(() => {});
+    }
+  }, [showCompletionScreen, rewardGauntlets, rewardXp]);
+
   if (showCompletionScreen) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-200 p-6">
@@ -533,6 +552,11 @@ export default function GauntletsPage() {
                   />
                 </div>
               )}
+            </div>
+          )}
+          {rewardXp !== null && (
+            <div className="pt-4 border-t">
+              <p className="text-xl font-semibold text-primary">{rewardXp} xp gained</p>
             </div>
           )}
           <Button onClick={() => router.push("/obtain-gear")} className="mt-4">

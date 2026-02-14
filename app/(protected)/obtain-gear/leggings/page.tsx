@@ -21,6 +21,7 @@ import {
   addToInventory,
   type Affinity,
 } from "@/lib/leggings-game";
+import { checkUserHasItem, addXpToUser, RARITY_XP } from "@/lib/inventory";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -55,7 +56,8 @@ export default function LeggingsPage() {
   const [showRules, setShowRules] = React.useState(false);
   const [showStrengths, setShowStrengths] = React.useState(false);
   const [showCompletionScreen, setShowCompletionScreen] = React.useState(false);
-  const [rewardLeggings, setRewardLeggings] = React.useState<{ id: string; name: string; image_url: string | null } | null>(null);
+  const [rewardLeggings, setRewardLeggings] = React.useState<{ id: string; name: string; image_url: string | null; rarity: string } | null>(null);
+  const [rewardXp, setRewardXp] = React.useState<number | null>(null);
   const [finalRounds, setFinalRounds] = React.useState(0);
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGameEnding, setIsGameEnding] = React.useState(false);
@@ -123,6 +125,7 @@ export default function LeggingsPage() {
     setIsGameEnding(false);
     setShowCompletionScreen(false);
     setRewardLeggings(null);
+    setRewardXp(null);
     setFinalRounds(0);
   };
 
@@ -274,8 +277,17 @@ export default function LeggingsPage() {
         if (rarity) {
           const leggings = await getRandomLeggingsByRarity(rarity);
           if (leggings) {
-            await addToInventory(userId, leggings.id);
-            setRewardLeggings(leggings);
+            const alreadyHas = await checkUserHasItem(userId, leggings.id);
+            if (alreadyHas) {
+              const xpVal = RARITY_XP[leggings.rarity] ?? RARITY_XP.Base ?? 1;
+              await addXpToUser(userId, xpVal);
+              setRewardXp(xpVal);
+              setRewardLeggings(null);
+            } else {
+              await addToInventory(userId, leggings.id);
+              setRewardLeggings(leggings);
+              setRewardXp(null);
+            }
           }
         }
       }
@@ -291,6 +303,7 @@ export default function LeggingsPage() {
   const handleResetGame = () => {
     setShowCompletionScreen(false);
     setRewardLeggings(null);
+    setRewardXp(null);
     setFinalRounds(0);
     setIsGameActive(false);
     setIsGameEnding(false);
@@ -298,6 +311,13 @@ export default function LeggingsPage() {
     setCurrentRoundGuess(Array(5).fill(null));
     setSelectedAffinity(null);
   };
+
+  React.useEffect(() => {
+    if (showCompletionScreen && (rewardLeggings || rewardXp !== null)) {
+      const audio = new Audio("https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/sounds/tada.mp3");
+      audio.play().catch(() => {});
+    }
+  }, [showCompletionScreen, rewardLeggings, rewardXp]);
 
   const rulesText = `A random set of 5 Affinities has been chosen as the answer.  Take a guess and learn how many affinities you guessed are an exact match and how many match but in the wrong location.
 
@@ -329,6 +349,11 @@ Try to guess in as few rounds as possible.  Good luck!`;
                   />
                 </div>
               )}
+            </div>
+          )}
+          {rewardXp !== null && (
+            <div className="pt-4 border-t">
+              <p className="text-xl font-semibold text-primary">{rewardXp} xp gained</p>
             </div>
           )}
           <Button onClick={() => router.push("/obtain-gear")} className="mt-4">

@@ -64,6 +64,7 @@ export async function updatePlayCount(userId: string): Promise<void> {
         gear_type: gearType,
         today_play_count: 1,
         total_play_count: 1,
+        has_claimed_reward: false,
       });
 
     if (insertError) {
@@ -194,13 +195,13 @@ export async function getRewardRarity(turns: number): Promise<string | null> {
  */
 export async function getRandomWeaponByRarity(
   rarity: string
-): Promise<{ id: string; name: string; image_url: string | null } | null> {
+): Promise<{ id: string; name: string; image_url: string | null; rarity: string } | null> {
   const supabase = createClient();
 
   try {
     const { data, error } = await supabase
       .from("weapons_lookup")
-      .select("id, name, image_url")
+      .select("id, name, image_url, rarity")
       .eq("rarity", rarity);
 
     if (error) {
@@ -220,6 +221,7 @@ export async function getRandomWeaponByRarity(
       id: selected.id,
       name: selected.name,
       image_url: selected.image_url,
+      rarity: selected.rarity ?? "Base",
     };
   } catch (error) {
     console.error("Error in getRandomWeaponByRarity:", error);

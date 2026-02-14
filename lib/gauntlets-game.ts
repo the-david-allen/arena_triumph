@@ -4,6 +4,7 @@ export interface GauntletsReward {
   id: string;
   name: string;
   image_url: string | null;
+  rarity: string;
 }
 
 /**
@@ -63,12 +64,13 @@ export async function updatePlayCount(userId: string): Promise<void> {
 
   const { error: insertError } = await supabase
     .from("user_gear_playcount")
-    .insert({
-      user_id: userId,
-      gear_type: gearType,
-      today_play_count: 1,
-      total_play_count: 1,
-    });
+.insert({
+        user_id: userId,
+        gear_type: gearType,
+        today_play_count: 1,
+        total_play_count: 1,
+        has_claimed_reward: false,
+      });
 
   if (insertError) {
     console.error("Error creating play count:", insertError);
@@ -190,7 +192,7 @@ export async function getRandomGauntletsByRarity(rarity: string): Promise<Gauntl
   try {
     const { data, error } = await supabase
       .from("gauntlets_lookup")
-      .select("id, name, image_url")
+      .select("id, name, image_url, rarity")
       .eq("rarity", rarity);
 
     if (error) {
@@ -209,6 +211,7 @@ export async function getRandomGauntletsByRarity(rarity: string): Promise<Gauntl
       id: selected.id,
       name: selected.name,
       image_url: selected.image_url,
+      rarity: selected.rarity ?? "Base",
     };
   } catch (error) {
     console.error("Error in getRandomGauntletsByRarity:", error);

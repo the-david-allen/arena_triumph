@@ -17,6 +17,7 @@ import {
   getRandomWeaponByRarity,
   addToInventory,
 } from "@/lib/weapon-game";
+import { checkUserHasItem, addXpToUser, RARITY_XP } from "@/lib/inventory";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
 import { playDiceRollSound } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
@@ -83,7 +84,9 @@ export default function WeaponPage() {
     id: string;
     name: string;
     image_url: string | null;
+    rarity: string;
   } | null>(null);
+  const [rewardXp, setRewardXp] = React.useState<number | null>(null);
   const [finalTurns, setFinalTurns] = React.useState(0);
   const [showRules, setShowRules] = React.useState(false);
   const [noPlacementMessage, setNoPlacementMessage] = React.useState("");
@@ -544,9 +547,18 @@ export default function WeaponPage() {
         console.log("Random weapon selected:", weapon);
         
         if (weapon) {
-          await addToInventory(userId, weapon.id);
-          console.log("Weapon added to inventory:", weapon.id);
-          setRewardWeapon(weapon);
+          const alreadyHas = await checkUserHasItem(userId, weapon.id);
+          if (alreadyHas) {
+            const xpVal = RARITY_XP[weapon.rarity] ?? RARITY_XP.Base ?? 1;
+            await addXpToUser(userId, xpVal);
+            setRewardXp(xpVal);
+            setRewardWeapon(null);
+          } else {
+            await addToInventory(userId, weapon.id);
+            console.log("Weapon added to inventory:", weapon.id);
+            setRewardWeapon(weapon);
+            setRewardXp(null);
+          }
         } else {
           console.error("No weapon found for rarity:", rarity);
         }
@@ -582,6 +594,7 @@ export default function WeaponPage() {
     setHighlightedDiceArea(null);
     setShowCompletionScreen(false);
     setRewardWeapon(null);
+    setRewardXp(null);
     setFinalTurns(0);
     setNoPlacementMessage("");
     setIsGameEnding(false);
@@ -593,6 +606,7 @@ export default function WeaponPage() {
   const handleResetGame = () => {
     setShowCompletionScreen(false);
     setRewardWeapon(null);
+    setRewardXp(null);
     setFinalTurns(0);
     setIsGameActive(false);
     setIsGameEnding(false);
@@ -624,6 +638,13 @@ export default function WeaponPage() {
     return countHighlightedColumns() === 2;
   }, [placeJustClicked, rolledDice, separatedDice, highlightedDiceArea, gridState]);
 
+  React.useEffect(() => {
+    if (showCompletionScreen && (rewardWeapon || rewardXp !== null)) {
+      const audio = new Audio("https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/sounds/tada.mp3");
+      audio.play().catch(() => {});
+    }
+  }, [showCompletionScreen, rewardWeapon, rewardXp]);
+
   // Show completion screen
   if (showCompletionScreen) {
     return (
@@ -648,6 +669,11 @@ export default function WeaponPage() {
                   />
                 </div>
               )}
+            </div>
+          )}
+          {rewardXp !== null && (
+            <div className="pt-4 border-t">
+              <p className="text-xl font-semibold text-primary">{rewardXp} xp gained</p>
             </div>
           )}
           <Button onClick={() => router.push("/obtain-gear")} className="mt-4">

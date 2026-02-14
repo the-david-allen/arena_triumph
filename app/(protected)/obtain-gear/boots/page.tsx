@@ -17,6 +17,7 @@ import {
   getRandomBootsByRarity,
   addToInventory,
 } from "@/lib/boots-game";
+import { checkUserHasItem, addXpToUser, RARITY_XP } from "@/lib/inventory";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
 import { BACKGROUND_MUSIC_VOLUME } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
@@ -138,7 +139,9 @@ export default function BootsPage() {
     id: string;
     name: string;
     image_url: string | null;
+    rarity: string;
   } | null>(null);
+  const [rewardXp, setRewardXp] = React.useState<number | null>(null);
   const [finalSeconds, setFinalSeconds] = React.useState(0);
   const [showRules, setShowRules] = React.useState(false);
   const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
@@ -214,8 +217,17 @@ export default function BootsPage() {
         if (rarity) {
           const boots = await getRandomBootsByRarity(rarity);
           if (boots) {
-            await addToInventory(userId, boots.id);
-            setRewardBoots(boots);
+            const alreadyHas = await checkUserHasItem(userId, boots.id);
+            if (alreadyHas) {
+              const xpVal = RARITY_XP[boots.rarity] ?? RARITY_XP.Base ?? 1;
+              await addXpToUser(userId, xpVal);
+              setRewardXp(xpVal);
+              setRewardBoots(null);
+            } else {
+              await addToInventory(userId, boots.id);
+              setRewardBoots(boots);
+              setRewardXp(null);
+            }
           }
         }
       }
@@ -248,6 +260,7 @@ export default function BootsPage() {
     setHasLost(false);
     setShowCompletionScreen(false);
     setRewardBoots(null);
+    setRewardXp(null);
     setFinalSeconds(0);
 
     // Start boots background music (same user gesture as Play Game)
@@ -344,6 +357,7 @@ export default function BootsPage() {
   const handleResetGame = () => {
     setShowCompletionScreen(false);
     setRewardBoots(null);
+    setRewardXp(null);
     setFinalSeconds(0);
     setIsGameActive(false);
     setIsGameEnding(false);
@@ -362,6 +376,13 @@ export default function BootsPage() {
     document.addEventListener("contextmenu", preventContextMenu);
     return () => document.removeEventListener("contextmenu", preventContextMenu);
   }, [isGameActive, isGameEnding]);
+
+  React.useEffect(() => {
+    if (showCompletionScreen && rewardBoots) {
+      const audio = new Audio("https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/sounds/tada.mp3");
+      audio.play().catch(() => {});
+    }
+  }, [showCompletionScreen, rewardBoots]);
 
   if (showCompletionScreen) {
     return (
@@ -392,6 +413,11 @@ export default function BootsPage() {
                   />
                 </div>
               )}
+            </div>
+          )}
+          {rewardXp !== null && (
+            <div className="pt-4 border-t">
+              <p className="text-xl font-semibold text-primary">{rewardXp} xp gained</p>
             </div>
           )}
           <Button onClick={() => router.push("/obtain-gear")} className="mt-4">
