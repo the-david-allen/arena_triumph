@@ -17,6 +17,7 @@ import {
   getRandomBeltByRarity,
   addToInventory,
 } from "@/lib/belt-game";
+import { generateBeltPuzzle } from "@/lib/belt-nonogram-generator";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
 import { BACKGROUND_MUSIC_VOLUME } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
@@ -29,274 +30,6 @@ const BELT_BACKGROUND_MUSIC_URL =
   "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/sounds/belt_background.mp3";
 
 type CellState = null | true | false; // null = empty, true = dark green, false = X
-
-/**
- * Calculate hints for a row or column
- * Returns array of run lengths of consecutive true values
- */
-function calculateHints(line: boolean[]): number[] {
-  const hints: number[] = [];
-  let currentRun = 0;
-
-  for (const cell of line) {
-    if (cell) {
-      currentRun++;
-    } else {
-      if (currentRun > 0) {
-        hints.push(currentRun);
-        currentRun = 0;
-      }
-    }
-  }
-
-  if (currentRun > 0) {
-    hints.push(currentRun);
-  }
-
-  return hints;
-}
-
-/**
- * Check if a line matches the given hints
- */
-function lineMatchesHints(line: boolean[], hints: number[]): boolean {
-  const calculatedHints = calculateHints(line);
-  if (calculatedHints.length !== hints.length) return false;
-  return calculatedHints.every((hint, i) => hint === hints[i]);
-}
-
-/**
- * Validate if a nonogram puzzle has a unique solution
- * Uses backtracking to count solutions - returns true if exactly one solution exists
- */
-const UNIQUENESS_MAX_RECURSION = 500000; // Prevent hang from runaway backtracking
-
-function validateGridUniqueness(rowHints: number[][], columnHints: number[][]): boolean {
-  const grid: (boolean | null)[][] = Array(GRID_SIZE)
-    .fill(null)
-    .map(() => Array(GRID_SIZE).fill(null));
-  
-  let solutionCount = 0;
-  let recursionCount = 0;
-  const MAX_SOLUTIONS_TO_CHECK = 2; // Stop after finding 2 solutions
-
-  function solve(row: number, col: number): void {
-    if (recursionCount++ > UNIQUENESS_MAX_RECURSION) return;
-    // If we've found more than one solution, stop
-    if (solutionCount >= MAX_SOLUTIONS_TO_CHECK) return;
-
-    // If we've filled the entire grid, check if it's valid
-    if (row === GRID_SIZE) {
-      // Validate all rows and columns
-      let isValid = true;
-      
-      // Check rows
-      for (let i = 0; i < GRID_SIZE && isValid; i++) {
-        const rowLine = grid[i].map(cell => cell === true);
-        if (!lineMatchesHints(rowLine, rowHints[i])) {
-          isValid = false;
-        }
-      }
-      
-      // Check columns
-      for (let j = 0; j < GRID_SIZE && isValid; j++) {
-        const colLine = grid.map(row => row[j] === true);
-        if (!lineMatchesHints(colLine, columnHints[j])) {
-          isValid = false;
-        }
-      }
-      
-      if (isValid) {
-        solutionCount++;
-      }
-      return;
-    }
-
-    // Calculate next position
-    const nextRow = col === GRID_SIZE - 1 ? row + 1 : row;
-    const nextCol = col === GRID_SIZE - 1 ? 0 : col + 1;
-
-    // Check if current row is complete and valid
-    if (col === 0 && row > 0) {
-      const prevRow = grid[row - 1].map(cell => cell === true);
-      if (!lineMatchesHints(prevRow, rowHints[row - 1])) {
-        return; // Previous row doesn't match hints, backtrack
-      }
-    }
-
-    // Try setting cell to true (filled)
-    grid[row][col] = true;
-    // Check if current column is still valid so far
-    const currentCol = grid.map(r => r[col] === true);
-    const colHintsSoFar = calculateHints(currentCol);
-    // Check if the hints so far could lead to a valid solution
-    if (colHintsSoFar.length <= columnHints[col].length) {
-      let couldBeValid = true;
-      for (let i = 0; i < colHintsSoFar.length; i++) {
-        if (i < colHintsSoFar.length - 1 && colHintsSoFar[i] !== columnHints[col][i]) {
-          couldBeValid = false;
-          break;
-        }
-        if (i === colHintsSoFar.length - 1 && colHintsSoFar[i] > columnHints[col][i]) {
-          couldBeValid = false;
-          break;
-        }
-      }
-      if (couldBeValid) {
-        solve(nextRow, nextCol);
-      }
-    }
-
-    // Try setting cell to false (empty)
-    grid[row][col] = false;
-    // Check if current column is still valid so far
-    const currentColEmpty = grid.map(r => r[col] === true);
-    const colHintsSoFarEmpty = calculateHints(currentColEmpty);
-    if (colHintsSoFarEmpty.length <= columnHints[col].length) {
-      let couldBeValid = true;
-      for (let i = 0; i < colHintsSoFarEmpty.length; i++) {
-        if (i < colHintsSoFarEmpty.length - 1 && colHintsSoFarEmpty[i] !== columnHints[col][i]) {
-          couldBeValid = false;
-          break;
-        }
-        if (i === colHintsSoFarEmpty.length - 1 && colHintsSoFarEmpty[i] > columnHints[col][i]) {
-          couldBeValid = false;
-          break;
-        }
-      }
-      if (couldBeValid) {
-        solve(nextRow, nextCol);
-      }
-    }
-
-    // Reset cell
-    grid[row][col] = null;
-  }
-
-  // Start solving from top-left
-  solve(0, 0);
-
-  // Return true only if exactly one solution found and we didn't hit recursion limit
-  return solutionCount === 1 && recursionCount <= UNIQUENESS_MAX_RECURSION;
-}
-
-/**
- * Generate a random nonogram puzzle
- * Returns: { puzzle: boolean[][], rowHints: number[][], columnHints: number[][] }
- */
-function generatePuzzle(): {
-  puzzle: boolean[][];
-  rowHints: number[][];
-  columnHints: number[][];
-} {
-  let puzzle: boolean[][];
-  let rowHints: number[][];
-  let columnHints: number[][];
-  let attempts = 0;
-  let totalRunsOfOne = 0;
-  const maxAttempts = 250;
-  const maxRunsOfOne = 20; // Cap total runs of length 1 (relaxed so generation can succeed)
-
-  do {
-    // Generate random 12x12 grid with ~50% fill rate (fewer isolated runs of 1)
-    puzzle = Array(GRID_SIZE)
-      .fill(null)
-      .map(() =>
-        Array(GRID_SIZE)
-          .fill(false)
-          .map(() => Math.random() < 0.55) // 50% fill rate
-      );
-
-    // Ensure each row and column has at least one filled cell
-    for (let i = 0; i < GRID_SIZE; i++) {
-      const rowHasFill = puzzle[i].some((cell) => cell);
-      if (!rowHasFill) {
-        const randomIndex = Math.floor(Math.random() * GRID_SIZE);
-        puzzle[i][randomIndex] = true;
-      }
-    }
-
-    for (let j = 0; j < GRID_SIZE; j++) {
-      const colHasFill = puzzle.some((row) => row[j]);
-      if (!colHasFill) {
-        const randomIndex = Math.floor(Math.random() * GRID_SIZE);
-        puzzle[randomIndex][j] = true;
-      }
-    }
-
-    // Calculate hints
-    rowHints = puzzle.map((row) => calculateHints(row));
-    columnHints = Array(GRID_SIZE)
-      .fill(null)
-      .map((_, j) => calculateHints(puzzle.map((row) => row[j])));
-
-    // Check if we have at least 2 rows with run length >= 6
-    const rowsWithLongRun = rowHints.filter((hints) => hints.some((hint) => hint >= 6)).length;
-    // Check if we have at least 2 columns with run length >= 6
-    const colsWithLongRun = columnHints.filter((hints) => hints.some((hint) => hint >= 6)).length;
-
-    // If we don't have enough long runs, add them
-    if (rowsWithLongRun < 2 || colsWithLongRun < 2) {
-      // Add runs of 6+ to rows if needed
-      let rowsAdded = 0;
-      const rowsToAdd = 2 - rowsWithLongRun;
-      const availableRows = Array.from({ length: GRID_SIZE }, (_, i) => i)
-        .filter((i) => !rowHints[i].some((hint) => hint >= 6))
-        .sort(() => Math.random() - 0.5); // Shuffle
-
-      for (let i = 0; i < Math.min(rowsToAdd, availableRows.length) && rowsAdded < rowsToAdd; i++) {
-        const rowIndex = availableRows[i];
-        // Find a position where we can place a run of 6
-        const startPos = Math.floor(Math.random() * (GRID_SIZE - 5));
-        // Place 6 consecutive true values
-        for (let j = startPos; j < startPos + 6 && j < GRID_SIZE; j++) {
-          puzzle[rowIndex][j] = true;
-        }
-        rowsAdded++;
-      }
-
-      // Add runs of 6+ to columns if needed
-      let colsAdded = 0;
-      const colsToAdd = 2 - colsWithLongRun;
-      const availableCols = Array.from({ length: GRID_SIZE }, (_, i) => i)
-        .filter((i) => !columnHints[i].some((hint) => hint >= 6))
-        .sort(() => Math.random() - 0.5); // Shuffle
-
-      for (let i = 0; i < Math.min(colsToAdd, availableCols.length) && colsAdded < colsToAdd; i++) {
-        const colIndex = availableCols[i];
-        // Find a position where we can place a run of 6
-        const startPos = Math.floor(Math.random() * (GRID_SIZE - 5));
-        // Place 6 consecutive true values
-        for (let j = startPos; j < startPos + 6 && j < GRID_SIZE; j++) {
-          puzzle[j][colIndex] = true;
-        }
-        colsAdded++;
-      }
-
-      // Recalculate hints after adding long runs
-      rowHints = puzzle.map((row) => calculateHints(row));
-      columnHints = Array(GRID_SIZE)
-        .fill(null)
-        .map((_, j) => calculateHints(puzzle.map((row) => row[j])));
-    }
-
-    // Count total runs of length 1; reject if too many
-    totalRunsOfOne =
-      rowHints.reduce((sum, hints) => sum + hints.filter((h) => h === 1).length, 0) +
-      columnHints.reduce((sum, hints) => sum + hints.filter((h) => h === 1).length, 0);
-
-    attempts++;
-    // Continue if empty rows/columns, not unique, or too many runs of length 1
-  } while (
-    attempts < maxAttempts &&
-    (rowHints.some((h) => h.length === 0) ||
-     columnHints.some((h) => h.length === 0) ||
-     !validateGridUniqueness(rowHints, columnHints) ||
-     totalRunsOfOne > maxRunsOfOne)
-  );
-
-  return { puzzle, rowHints, columnHints };
-}
 
 export default function BeltPage() {
   const router = useRouter();
@@ -410,7 +143,8 @@ export default function BeltPage() {
         setTodayPlayCount((prev) => (prev !== null ? prev + 1 : null));
       }
       await new Promise((resolve) => setTimeout(resolve, 0));
-      const { puzzle: newPuzzle, rowHints: newRowHints, columnHints: newColumnHints } = generatePuzzle();
+      const { puzzle: newPuzzle, rowHints: newRowHints, columnHints: newColumnHints } =
+        generateBeltPuzzle();
       setPuzzle(newPuzzle);
       setRowHints(newRowHints);
       setColumnHints(newColumnHints);
@@ -442,6 +176,9 @@ export default function BeltPage() {
       } catch {
         // Autoplay blocked or SSR - fail silently
       }
+    } catch (error) {
+      console.error("Failed to generate puzzle:", error);
+      // User can click Play Game again; finally will clear isGenerating
     } finally {
       setIsGenerating(false);
     }
