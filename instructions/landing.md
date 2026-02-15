@@ -15,9 +15,8 @@ Pressing the Save button will write the chosen username into the username field 
 
 
 Main Landing Page:
-Display "Welcome to the Arena.  Can you triumph?"
-Display "You'll need to master a number of challenges to have a chance at beating some of the Arena bosses."
-Display "Obtain Gear for your armor and weapon slots by beating that slot's challenge - the better you do, the better gear you'll receive."
-Display "Manage your Inventory by equipping or removing gear."
-Display "When you're ready, Battle to test your strength against today's Arena bosses."
+Display in large spectral font, "Can you Triumph in the Arena?"
 
+Underneath that, display the image found here:  https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/bling/game_loop.png
+
+Underneath that on the left side display the "Daily Rewards" button and on the right side display the "Affinity References" button.

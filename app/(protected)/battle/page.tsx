@@ -21,6 +21,13 @@ const TIER_BORDER_COLORS: Record<number, string> = {
   4: "rgb(230, 0, 38)",
 };
 
+const TIER_VIDEO_SOURCES: Record<number, string> = {
+  1: "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/bling/boss_rotation1.webm",
+  2: "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/bling/boss_rotation2.webm",
+  3: "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/bling/boss_rotation3.webm",
+  4: "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/bling/boss_rotation4.webm",
+};
+
 interface TierStatus {
   tier: number;
   has_scouted: boolean;
@@ -116,6 +123,9 @@ export default function BattleSelectPage() {
       <h1 className="text-center text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
         Today&apos;s Arena Boss Line-up
       </h1>
+      <p className="text-center text-sm text-muted-foreground sm:text-base">
+        Reminder: You may only enter the Arena once to battle each boss today.
+      </p>
 
       {/* Layout: Tiers 1–3 horizontally aligned; Tier 4 centered underneath */}
       <div className="flex flex-col items-center gap-8">
@@ -167,6 +177,7 @@ interface TierCardProps {
 
 function TierCard({ tier, status, onTierClick, onScoutClick }: TierCardProps) {
   const borderColor = TIER_BORDER_COLORS[tier] ?? "rgb(100, 100, 100)";
+  const videoSrc = TIER_VIDEO_SOURCES[tier];
   const hasFought = status?.has_fought ?? false;
   const hasScouted = status?.has_scouted ?? false;
 
@@ -177,23 +188,41 @@ function TierCard({ tier, status, onTierClick, onScoutClick }: TierCardProps) {
         onClick={() => onTierClick(tier)}
         disabled={hasFought}
         className={cn(
-          "relative flex h-40 w-40 shrink-0 items-center justify-center rounded-lg border-4 bg-card text-card-foreground shadow-sm transition-colors",
+          "relative flex h-40 w-40 shrink-0 items-center justify-center overflow-hidden rounded-lg border-4 text-card-foreground shadow-sm transition",
           hasFought
-            ? "cursor-not-allowed opacity-60"
-            : "hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            ? "cursor-not-allowed bg-black"
+            : "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 hover:brightness-110"
         )}
         style={{ borderColor }}
         aria-label={hasFought ? `Tier ${tier} (already fought)` : `Select Tier ${tier} boss`}
       >
         {hasFought ? (
           <span
-            className="text-6xl font-bold leading-none text-muted-foreground"
+            className="text-6xl font-bold leading-none text-gray-500"
             aria-hidden
           >
             ✕
           </span>
         ) : (
-          <span className="text-xl font-semibold">Tier {tier}</span>
+          <>
+            {videoSrc ? (
+              <video
+                className="absolute inset-0 h-full w-full object-cover"
+                autoPlay
+                loop
+                muted
+                playsInline
+                preload="auto"
+                aria-hidden
+              >
+                <source src={videoSrc} type="video/webm" />
+              </video>
+            ) : null}
+            <span className="absolute inset-0 bg-black/35" aria-hidden />
+            <span className="relative z-10 text-xl font-semibold text-white">
+              Tier {tier}
+            </span>
+          </>
         )}
       </button>
       <Button
