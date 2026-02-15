@@ -16,11 +16,18 @@ import { Button } from "@/components/ui/button";
 import { CombatantArea } from "@/components/battle/CombatantArea";
 import { FightStatusDisplay } from "@/components/battle/FightStatusDisplay";
 import { DebugWindow } from "@/components/battle/DebugWindow";
-import type { ZoneType } from "@/components/battle/HitBar";
+import { PopTheLock, type HitAccuracy } from "@/components/battle/PopTheLock";
 import { BACKGROUND_MUSIC_VOLUME } from "@/lib/sounds";
 
 const BATTLE_BACKGROUND_MUSIC_URL =
   "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/sounds/battle_background.mp3";
+
+/* Damage multipliers for PopTheLock accuracy tiers */
+const DAMAGE_MULTIPLIER: Record<HitAccuracy, number> = {
+  perfect: 1.5,
+  good: 1.0,
+  miss: 0.5,
+};
 
 type FightPhase =
   | "loading"
@@ -45,15 +52,12 @@ export default function BattleTierPage() {
   }
 
   const [phase, setPhase] = useState<FightPhase>("loading");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [battleData, setBattleData] = useState<BattleData | null>(null);
   const [stats, setStats] = useState<CombatStats | null>(null);
   const [countdown, setCountdown] = useState(5);
   const [playerHealth, setPlayerHealth] = useState(0);
   const [bossHealth, setBossHealth] = useState(0);
   const [statusText, setStatusText] = useState("");
-  const [showHitBar, setShowHitBar] = useState(false);
-  const [isPlayerTurnNext, setIsPlayerTurnNext] = useState(true);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const userIdRef = useRef<string | null>(null);
   const hasUpdatedHasFoughtRef = useRef(false);
@@ -61,6 +65,7 @@ export default function BattleTierPage() {
   const battleAudioRef = useRef<HTMLAudioElement | null>(null);
   const battleMusicStartedRef = useRef(false);
 
+  /* ─── Background music ─── */
   useEffect(() => {
     if (phase === "player_turn" || phase === "boss_turn") {
       if (battleMusicStartedRef.current) return;
@@ -95,12 +100,14 @@ export default function BattleTierPage() {
     };
   }, []);
 
+  /* ─── Level-up toast ─── */
   useEffect(() => {
     if (!showLevelUp) return;
     const t = setTimeout(() => setShowLevelUp(false), 2000);
     return () => clearTimeout(t);
   }, [showLevelUp]);
 
+  /* ─── Load battle data ─── */
   const loadBattle = useCallback(async () => {
     const supabase = createClient();
     const {
@@ -143,6 +150,7 @@ export default function BattleTierPage() {
     loadBattle();
   }, [loadBattle]);
 
+  /* ─── Countdown ─── */
   useEffect(() => {
     if (phase !== "countdown") return;
 
@@ -156,11 +164,9 @@ export default function BattleTierPage() {
       }
 
       const playerFirst = Math.random() >= 0.5;
-      setIsPlayerTurnNext(playerFirst);
       if (playerFirst) {
         setPhase("player_turn");
-        setStatusText("Time Your Attacks in the green zone");
-        setShowHitBar(true);
+        setStatusText("Time your strike!");
       } else {
         setPhase("boss_turn");
         setStatusText(`${battleData?.boss.name ?? "Boss"} Attacks!`);
@@ -176,38 +182,20 @@ export default function BattleTierPage() {
     return () => clearTimeout(t);
   }, [phase, countdown, tier, battleData?.boss.name]);
 
-  const evaluateHitResult = useCallback(
-    (clicks: ZoneType[]): "critical" | "success" | "clumsy" => {
-      const greenCount = clicks.filter((z) => z === "green").length;
-      const yellowCount = clicks.filter((z) => z === "yellow").length;
-
-      if (clicks.length === 2 && greenCount === 2) return "critical";
-      if (
-        clicks.length === 2 &&
-        (greenCount >= 1 || yellowCount === 2)
-      ) {
-        return "success";
-      }
-      return "clumsy";
-    },
-    []
-  );
-
-  const handleHitBarComplete = useCallback(
-    (clicks: ZoneType[]) => {
-      setShowHitBar(false);
+  /* ─── Player hit callback (PopTheLock) ─── */
+  const handlePlayerHit = useCallback(
+    (accuracy: HitAccuracy) => {
       if (!stats || !battleData) return;
 
-      const result = evaluateHitResult(clicks);
-      let damage = stats.playerSwingDamage;
-      if (result === "critical") {
-        damage = stats.playerSwingDamage + 1;
+      const multiplier = DAMAGE_MULTIPLIER[accuracy];
+      const damage = Math.max(1, Math.round(stats.playerSwingDamage * multiplier));
+
+      if (accuracy === "perfect") {
         setStatusText("Critical Hit!");
-      } else if (result === "success") {
+      } else if (accuracy === "good") {
         setStatusText("Successful Attack");
       } else {
-        damage = Math.max(1, stats.playerSwingDamage - 1);
-        setStatusText("Clumsy attack");
+        setStatusText("Clumsy Attack");
       }
 
       setBossHealth((h) => {
@@ -227,14 +215,15 @@ export default function BattleTierPage() {
           setTimeout(() => {
             setPhase("boss_turn");
             setStatusText(`${battleData.boss.name} Attacks!`);
-          }, 1500);
+          }, 1200);
         }
         return newHealth;
       });
     },
-    [stats, battleData, tier, evaluateHitResult]
+    [stats, battleData, tier]
   );
 
+  /* ─── Boss turn ─── */
   useEffect(() => {
     if (phase !== "boss_turn") {
       bossTurnProcessedRef.current = false;
@@ -269,9 +258,8 @@ export default function BattleTierPage() {
         } else {
           setTimeout(() => {
             setPhase("player_turn");
-            setStatusText("Time Your Attacks in the green zone");
-            setShowHitBar(true);
-          }, 1500);
+            setStatusText("Time your strike!");
+          }, 1200);
         }
         return newHealth;
       });
@@ -280,6 +268,7 @@ export default function BattleTierPage() {
     return () => clearTimeout(t);
   }, [phase, battleData, stats]);
 
+  /* ─── Early-exit screens ─── */
   if (phase === "loading") {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
@@ -319,8 +308,11 @@ export default function BattleTierPage() {
     );
   }
 
+  /* ─── Main battle layout ─── */
   const boss = battleData?.boss;
   const playerProfile = battleData?.playerProfile;
+  const isPlayerTurn = phase === "player_turn";
+  const isBossTurn = phase === "boss_turn";
 
   return (
     <div className="flex flex-col gap-6">
@@ -328,13 +320,11 @@ export default function BattleTierPage() {
         Battle — Tier {tier}
       </h1>
 
-      <FightStatusDisplay
-        statusText={statusText}
-        showHitBar={showHitBar}
-        onHitBarComplete={handleHitBarComplete}
-      />
+      {/* Status text */}
+      <FightStatusDisplay statusText={statusText} />
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+      {/* Player | PopTheLock | Boss — always 3-column */}
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
         <CombatantArea
           imageUrl={playerProfile?.user_image_url ?? null}
           name={playerProfile?.username ?? "Player"}
@@ -342,6 +332,31 @@ export default function BattleTierPage() {
           maxHealth={stats?.playerHealth ?? 1}
           isPlayer
         />
+
+        <div className="flex items-center gap-2">
+          <span
+            className={`text-xs font-semibold whitespace-nowrap transition-opacity duration-300 ${
+              isPlayerTurn ? "opacity-100 text-foreground" : "opacity-0"
+            }`}
+          >
+            Player&apos;s Turn
+          </span>
+
+          <PopTheLock
+            isActive={isPlayerTurn}
+            isSpinning={isBossTurn}
+            onHit={handlePlayerHit}
+          />
+
+          <span
+            className={`text-xs font-semibold whitespace-nowrap transition-opacity duration-300 ${
+              isBossTurn ? "opacity-100 text-foreground" : "opacity-0"
+            }`}
+          >
+            Boss&apos;s Turn
+          </span>
+        </div>
+
         <CombatantArea
           imageUrl={boss?.image_url ?? null}
           name={boss?.name ?? "Boss"}
@@ -350,15 +365,19 @@ export default function BattleTierPage() {
         />
       </div>
 
+      {/* Debug */}
       <div className="flex justify-center">
         <DebugWindow stats={stats} />
       </div>
 
+      {/* Level-up toast */}
       {phase === "player_wins" && showLevelUp && (
         <p className="text-center text-2xl font-bold text-primary">
           Level Up!
         </p>
       )}
+
+      {/* End-of-fight button */}
       {(phase === "player_wins" || phase === "boss_wins") && (
         <div className="flex justify-center">
           <Button asChild>

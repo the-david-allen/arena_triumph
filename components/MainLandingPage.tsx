@@ -22,6 +22,9 @@ export function MainLandingPage() {
             Welcome to the Arena
           </h1>
           <p className="mt-3 max-w-2xl text-lg text-muted-foreground sm:text-xl">
+            Can you triumph?
+          </p>
+          <p className="mt-1 max-w-2xl text-base text-muted-foreground/80 sm:text-lg">
             Obtain Gear → Manage Your Inventory → Battle Bosses
           </p>
 
@@ -56,9 +59,14 @@ export function MainLandingPage() {
               <p className="text-base text-muted-foreground sm:text-lg">
                 Obtain Gear for your armor and weapon slots by beating that
                 slot&apos;s challenge — the better you do, the better gear
-                you&apos;ll receive. Manage your Inventory by equipping or
-                removing gear. When you&apos;re ready, Battle to test your
-                strength against today&apos;s Arena bosses.
+                you&apos;ll receive.
+              </p>
+              <p className="text-base text-muted-foreground sm:text-lg">
+                Manage your Inventory by equipping or removing gear.
+              </p>
+              <p className="text-base text-muted-foreground sm:text-lg">
+                When you&apos;re ready, Battle to test your strength against
+                today&apos;s Arena bosses.
               </p>
             </div>
           </CardContent>

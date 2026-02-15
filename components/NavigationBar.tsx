@@ -26,18 +26,22 @@ export function NavigationBar() {
   }
 
   return (
-    <nav className="border-b bg-card shadow-sm">
+    <nav className="border-b shadow-sm bg-[var(--nav-bar-bg)]">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
+        <div className="flex h-28 items-center justify-between">
           <div className="flex items-center">
             <Link
               href="/"
-              className="text-lg sm:text-xl font-bold text-foreground hover:text-primary"
+              className="flex items-center hover:opacity-90 transition-opacity"
             >
-              Arena Triumph
+              <img
+                src="https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/bling/arena_triumph_title.png"
+                alt="Arena Triumph"
+                className="h-[7rem] sm:h-[7.875rem] w-auto object-contain"
+              />
             </Link>
           </div>
-          <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-1 overflow-x-hidden">
             <div className="flex items-center space-x-1">
               {navigationItems.map((item) => {
                 const isActive = pathname?.startsWith(item.href);
@@ -46,10 +50,10 @@ export function NavigationBar() {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "rounded-md px-2 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap",
+                      "rounded-md px-3 py-2 text-base sm:text-lg font-bold whitespace-nowrap transition-all duration-200 hover:bg-accent hover:text-accent-foreground",
                       isActive
                         ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                        : "text-white"
                     )}
                   >
                     {item.name}
@@ -61,7 +65,7 @@ export function NavigationBar() {
               variant="ghost"
               size="sm"
               onClick={handleSignOut}
-              className="ml-2 text-xs sm:text-sm whitespace-nowrap"
+              className="ml-2 text-base sm:text-lg font-bold text-white whitespace-nowrap transition-all duration-200 hover:bg-accent hover:text-accent-foreground"
             >
               Sign Out
             </Button>

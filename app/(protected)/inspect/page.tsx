@@ -63,7 +63,7 @@ function EquipmentSlot({
         textAlign === "right" && "text-right"
       )}
     >
-      <p className="font-medium leading-tight">
+      <p className="break-words font-medium leading-tight">
         {item?.details?.name ?? (
           <span className="text-muted-foreground">Empty</span>
         )}
@@ -284,22 +284,25 @@ export default function InspectPage() {
               </div>
             </div>
 
-            {/* Bottom row: Leggings, Belt, Boots - vertical layout */}
+            {/* Bottom row: Leggings, Belt, Boots - vertical layout with word wrap */}
             <div className="mt-2 flex justify-center gap-6">
               <EquipmentSlot
                 item={equippedItems["Leggings"] ?? null}
                 slotName="Leggings"
                 layout="vertical"
+                className="min-w-0 max-w-36"
               />
               <EquipmentSlot
                 item={equippedItems["Belt"] ?? null}
                 slotName="Belt"
                 layout="vertical"
+                className="min-w-0 max-w-36"
               />
               <EquipmentSlot
                 item={equippedItems["Boots"] ?? null}
                 slotName="Boots"
                 layout="vertical"
+                className="min-w-0 max-w-36"
               />
             </div>
           </div>

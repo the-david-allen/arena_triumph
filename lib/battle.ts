@@ -242,10 +242,15 @@ export function calculateCombatStats(
 
   const playerHealth = playerProfile.level + 9;
 
-  let numPlayerHits = -0.3 * (playerAttack - boss.defense_strength) + 12;
-  if (numPlayerHits < 2) numPlayerHits = 2;
+  // Targeting 10-20 player clicks per fight; baseline 15 when evenly matched
+  let numPlayerHits = Math.round(-0.4 * (playerAttack - boss.defense_strength) + 15);
+  numPlayerHits = Math.max(5, Math.min(25, numPlayerHits));
 
-  const playerSwingDamage = Math.round(boss.health / numPlayerHits);
+  let playerSwingDamage = Math.max(1, Math.round(boss.health / numPlayerHits));
+  // Guarantee boss cannot die in a single hit
+  if (playerSwingDamage >= boss.health && boss.health > 1) {
+    playerSwingDamage = Math.max(1, Math.floor(boss.health / 2));
+  }
 
   let playerDefense = 0;
   for (const slot of ARMOR_SLOTS) {
@@ -268,10 +273,14 @@ export function calculateCombatStats(
     playerDefense += slotPower;
   }
 
-  let numBossHits = -0.3 * (boss.attack_strength - playerDefense) + 12;
-  if (numBossHits < 1) numBossHits = 1;
+  let numBossHits = Math.round(-0.4 * (boss.attack_strength - playerDefense) + 15);
+  numBossHits = Math.max(2, Math.min(30, numBossHits));
 
-  const bossSwingDamage = Math.ceil(playerHealth / numBossHits);
+  let bossSwingDamage = Math.max(1, Math.ceil(playerHealth / numBossHits));
+  // Guarantee player cannot die in a single hit
+  if (bossSwingDamage >= playerHealth && playerHealth > 1) {
+    bossSwingDamage = Math.max(1, Math.floor(playerHealth / 2));
+  }
 
   return {
     playerAttack,

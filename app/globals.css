@@ -40,6 +40,10 @@
     --secondary-foreground: 25 15% 20%;
     --danger: 0 65% 50%;
     --danger-foreground: 0 0% 100%;
+
+    /* Nav and page backgrounds */
+    --nav-bar-bg: rgb(45, 25, 65);
+    --page-bg: rgb(211, 211, 211);
   }
 
   .dark {

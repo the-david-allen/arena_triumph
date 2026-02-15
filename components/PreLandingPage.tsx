@@ -99,7 +99,12 @@ export function PreLandingPage({ userId, onProfileComplete }: PreLandingPageProp
                 value={username}
                 onChange={(e) => handleUsernameChange(e.target.value)}
                 maxLength={20}
-                className="w-52 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className={cn(
+                  "w-52 rounded-md border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                  validationMessage === "Username taken"
+                    ? "border-destructive focus-visible:ring-destructive"
+                    : "border-input focus-visible:ring-ring"
+                )}
                 placeholder="Enter username"
                 disabled={isChecking || isSaving}
               />

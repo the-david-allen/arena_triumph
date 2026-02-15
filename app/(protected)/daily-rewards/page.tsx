@@ -11,7 +11,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { PageShell } from "@/components/ui/PageShell";
 import { createClient } from "@/lib/supabase/client";
 import {
   getDailyRewardState,
@@ -122,7 +121,7 @@ export default function DailyRewardsPage() {
   }, []);
 
   return (
-    <PageShell className="bg-bg">
+    <>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Daily Rewards</h1>
@@ -257,6 +256,6 @@ export default function DailyRewardsPage() {
           )}
         </DialogContent>
       </Dialog>
-    </PageShell>
+    </>
   );
 }

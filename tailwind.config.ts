@@ -67,6 +67,8 @@ const config: Config = {
           DEFAULT: "hsl(var(--danger))",
           foreground: "hsl(var(--danger-foreground))",
         },
+        navBar: "var(--nav-bar-bg)",
+        page: "var(--page-bg)",
       },
       borderRadius: {
         lg: "var(--radius)",

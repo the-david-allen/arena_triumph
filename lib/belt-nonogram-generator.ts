@@ -2,10 +2,12 @@
  * Belt nonogram generator (12x12).
  * Ported from reference: deterministic, no-guessing, 75–85 filled cells, medium–hard.
  * Uses bitmask representation and precomputed clue→patterns lookup.
+ * A "pattern" is a 12-bit mask (one row or one column); a "run" is a maximal contiguous block of 1s.
  */
 
 const N = 12;
 const FULL_MASK = (1 << N) - 1;
+const MAX_RUNS_PER_LINE = 3;
 
 export interface GeneratorParams {
   minFilled: number;
@@ -29,27 +31,27 @@ export interface GeneratorParams {
 }
 
 export const DEFAULT_PARAMS: GeneratorParams = {
-  minFilled: 75,
+  minFilled: 80,
   maxFilled: 90,
   maxAttempts: 150000,
   rowAmbiguityMin: 4,
-  rowAmbiguityMax: 100,
-  rowForcedMax: 7,
+  rowAmbiguityMax: 90,
+  rowForcedMax: 8,
   colAmbiguityMin: 4,
-  colAmbiguityMax: 100,
-  colForcedMax: 7,
+  colAmbiguityMax: 95,
+  colForcedMax: 8,
   
   // The following parameters ensure the puzzle doesn't get too easy
   minRounds: 4,
-  minLineUpdates: 20,
-  maxFirstRoundCellsSet: 65,
-  minMaxLineCandidatesSeen: 15,
+  minLineUpdates: 15,
+  maxFirstRoundCellsSet:80,
+  minMaxLineCandidatesSeen: 10,
 
   // The following parameters ensure the puzzle doesn't get too hard
   maxRounds: 6,
   maxLineUpdates: 60,
-  minFirstRoundCellsSet: 35,
-  maxMaxLineCandidatesSeen: 70,
+  minFirstRoundCellsSet: 40,
+  maxMaxLineCandidatesSeen: 85,
 
   requireUniqueCheck: true,
 };
@@ -117,7 +119,7 @@ function seedFromString(str: string): number {
   return h >>> 0;
 }
 
-/** Popcount LUT for 0..4095 */
+/** Popcount LUT for 0..4095 (12-bit patterns). */
 const POPCOUNT = new Uint8Array(1 << N);
 for (let x = 0; x < 1 << N; x++) {
   let v = x;
@@ -128,6 +130,29 @@ for (let x = 0; x < 1 << N; x++) {
   }
   POPCOUNT[x] = c;
 }
+
+/**
+ * Number of contiguous filled runs in a 12-bit row/column pattern (0..MAX_RUNS_PER_LINE allowed).
+ * Run start at bit i when bit i === 1 and bit i-1 === 0 (i === 0 uses implicit 0).
+ */
+const RUNCOUNT = new Uint8Array(1 << N);
+for (let x = 0; x < 1 << N; x++) {
+  const runStarts = (x & ~((x << 1) & FULL_MASK)) & FULL_MASK;
+  RUNCOUNT[x] = POPCOUNT[runStarts];
+}
+
+/**
+ * Sanity-check RUNCOUNT LUT on known patterns. Throws if any check fails.
+ * For tests/debug; call at module load.
+ */
+export function runCountLUTSanityCheck(): boolean {
+  if (RUNCOUNT[0b000000000000] !== 0) throw new Error("RUNCOUNT[0] expected 0");
+  if (RUNCOUNT[0b111111111111] !== 1) throw new Error("RUNCOUNT[FULL_MASK] expected 1");
+  if (RUNCOUNT[0b101010101010] !== 6) throw new Error("RUNCOUNT[0b101010101010] expected 6");
+  if (RUNCOUNT[0b001110011100] !== 2) throw new Error("RUNCOUNT[0b001110011100] expected 2");
+  return true;
+}
+runCountLUTSanityCheck();
 
 function bitIndex(lsb: number): number {
   return 31 - Math.clz32(lsb >>> 0);
@@ -225,6 +250,21 @@ function gridColsFromRows(rowBits: number[]): number[] {
     }
   }
   return colBits;
+}
+
+/**
+ * Verifies that no row or column has more than MAX_RUNS_PER_LINE runs.
+ * For tests/debug; rowBits are 12-bit row patterns.
+ */
+export function validateRunCountConstraint(rowBits: number[]): boolean {
+  for (let r = 0; r < N; r++) {
+    if (RUNCOUNT[rowBits[r] & FULL_MASK] > MAX_RUNS_PER_LINE) return false;
+  }
+  const colBits = gridColsFromRows(rowBits);
+  for (let c = 0; c < N; c++) {
+    if (RUNCOUNT[colBits[c] & FULL_MASK] > MAX_RUNS_PER_LINE) return false;
+  }
+  return true;
 }
 
 function cluesFromRowBits(rowBits: number[]): { rowClues: number[][]; colClues: number[][] } {
@@ -619,6 +659,7 @@ function generateDeterministicMediumHard(
 
   const rowPool: number[] = [];
   for (let bits = 0; bits < 1 << N; bits++) {
+    if (RUNCOUNT[bits] > MAX_RUNS_PER_LINE) continue;
     const info = patternInfo[bits];
     if (info.ones < 3 || info.ones > 11) continue;
     if (info.ambiguity < P.rowAmbiguityMin || info.ambiguity > P.rowAmbiguityMax) continue;
@@ -632,32 +673,85 @@ function generateDeterministicMediumHard(
   for (let attempt = 0; attempt < P.maxAttempts; attempt++) {
     const rowBits: number[] = [];
     let filled = 0;
+    // Column run state for incremental max-3-runs check (per attempt).
+    const colRuns = new Array<number>(N).fill(0);
+    const colInRun = new Array<number>(N).fill(0);
+    const colLockedZero = new Array<number>(N).fill(0);
 
+    let attemptAborted = false;
     for (let r = 0; r < N; r++) {
       let picked: number | null = null;
 
       for (let tries = 0; tries < 80; tries++) {
-        const cand = rng.pick(rowPool);
+        const cand = rng.pick(rowPool) & FULL_MASK;
         const ones = POPCOUNT[cand];
         const newFilled = filled + ones;
         const remaining = N - (r + 1);
         const minPossible = newFilled + remaining * 5;
         const maxPossible = newFilled + remaining * 8;
         if (minPossible > P.maxFilled || maxPossible < P.minFilled) continue;
+
+        // Trial column-run update on copies; reject if any column would exceed 3 runs.
+        const colRunsTmp = colRuns.slice();
+        const colInRunTmp = colInRun.slice();
+        const colLockedZeroTmp = colLockedZero.slice();
+        let reject = false;
+        for (let c = 0; c < N; c++) {
+          const bit = (cand >>> c) & 1;
+          if (colLockedZeroTmp[c] && bit === 1) {
+            reject = true;
+            break;
+          }
+          if (bit === 1) {
+            if (colInRunTmp[c] === 0) {
+              colRunsTmp[c]++;
+              if (colRunsTmp[c] > MAX_RUNS_PER_LINE) {
+                reject = true;
+                break;
+              }
+              colInRunTmp[c] = 1;
+            }
+          } else {
+            if (colInRunTmp[c] === 1) {
+              colInRunTmp[c] = 0;
+              if (colRunsTmp[c] === MAX_RUNS_PER_LINE) colLockedZeroTmp[c] = 1;
+            }
+          }
+        }
+        if (reject) continue;
+
+        // Commit trackers and accept row.
+        for (let c = 0; c < N; c++) {
+          colRuns[c] = colRunsTmp[c];
+          colInRun[c] = colInRunTmp[c];
+          colLockedZero[c] = colLockedZeroTmp[c];
+        }
         picked = cand;
         filled = newFilled;
         break;
       }
 
       if (picked === null) {
-        picked = rng.pick(rowPool);
-        filled += POPCOUNT[picked];
+        attemptAborted = true;
+        break;
       }
 
-      rowBits.push(picked & FULL_MASK);
+      rowBits.push(picked);
     }
 
+    if (attemptAborted) continue;
     if (filled < P.minFilled || filled > P.maxFilled) continue;
+
+    // Final sanity: every column must have at most 3 runs.
+    const colBits = gridColsFromRows(rowBits);
+    let colRunsBad = false;
+    for (let c = 0; c < N; c++) {
+      if (RUNCOUNT[colBits[c]] > MAX_RUNS_PER_LINE) {
+        colRunsBad = true;
+        break;
+      }
+    }
+    if (colRunsBad) continue;
 
     const { rowClues, colClues } = cluesFromRowBits(rowBits);
 
@@ -691,6 +785,9 @@ function generateDeterministicMediumHard(
     if (m.lineUpdates < P.minLineUpdates || m.lineUpdates > P.maxLineUpdates) continue;
     if (m.firstRoundCellsSet > P.maxFirstRoundCellsSet || m.firstRoundCellsSet < P.minFirstRoundCellsSet) continue;
     if (m.maxLineCandidatesSeen < P.minMaxLineCandidatesSeen || m.maxLineCandidatesSeen > P.maxMaxLineCandidatesSeen) continue;
+
+    // Hard gate: never return a grid that violates max 3 runs per line (safety net).
+    if (!validateRunCountConstraint(rowBits)) continue;
 
     return {
       dateStr: seedStr,
