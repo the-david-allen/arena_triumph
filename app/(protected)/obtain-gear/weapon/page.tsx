@@ -26,6 +26,16 @@ import { useRouter } from "next/navigation";
 
 const COLUMNS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 const CDN_BASE_URL = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/slots";
+const DICE_IMAGES_BASE_URL = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/bling/dice";
+
+const NUMBERED_DICE_IMAGE_MAP: Record<number, string> = {
+  1: "one.png",
+  2: "two.png",
+  3: "three.png",
+  4: "four.png",
+  5: "five.png",
+  6: "six.png",
+};
 
 // Column heights mapping (varying heights like Can't Stop)
 const COLUMN_HEIGHTS: Record<number, number> = {
@@ -765,11 +775,18 @@ export default function WeaponPage() {
                       draggable={separatedDice.length < 2}
                       onDragStart={(e) => handleDiceDragStart(index, e)}
                       className={cn(
-                        "w-12 h-12 border-2 border-gray-600 rounded flex items-center justify-center text-xl font-bold bg-white",
-                        separatedDice.length < 2 && "cursor-move hover:bg-gray-100"
+                        "flex items-center justify-center overflow-hidden",
+                        separatedDice.length < 2 && "cursor-move"
                       )}
                     >
-                      {die}
+                      <Image
+                        src={`${DICE_IMAGES_BASE_URL}/${NUMBERED_DICE_IMAGE_MAP[die]}`}
+                        alt={`${die}`}
+                        width={64}
+                        height={64}
+                        className="object-contain w-16 h-16"
+                        unoptimized
+                      />
                     </div>
                   ))}
                 </div>
@@ -797,9 +814,16 @@ export default function WeaponPage() {
                     <div
                       key={index}
                       onClick={() => handleRemoveSeparatedDie(index)}
-                      className="w-12 h-12 border-2 border-gray-600 rounded flex items-center justify-center text-xl font-bold bg-white cursor-pointer hover:bg-gray-100"
+                      className="flex items-center justify-center overflow-hidden cursor-pointer"
                     >
-                      {die}
+                      <Image
+                        src={`${DICE_IMAGES_BASE_URL}/${NUMBERED_DICE_IMAGE_MAP[die]}`}
+                        alt={`${die}`}
+                        width={64}
+                        height={64}
+                        className="object-contain w-16 h-16"
+                        unoptimized
+                      />
                     </div>
                   ))}
                 </div>

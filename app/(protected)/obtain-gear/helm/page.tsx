@@ -37,6 +37,16 @@ const SLOT_IMAGE_MAP: Record<SlotName, string> = {
 };
 
 const CDN_BASE_URL = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/slots";
+const DICE_IMAGES_BASE_URL = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/bling/dice";
+
+const NUMBERED_DICE_IMAGE_MAP: Record<number, string> = {
+  1: "one.png",
+  2: "two.png",
+  3: "three.png",
+  4: "four.png",
+  5: "five.png",
+  6: "six.png",
+};
 
 const ENCUMBERANCE_VALUE = -8;
 const INITIAL_STRIKES = 10;
@@ -525,24 +535,32 @@ Also, each piece of equipment you use (meaning you have 1 or more cells filled i
                 </Button>
               </div>
 
-              {/* Dice on the right */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Dice and message */}
+              <div className="flex items-center gap-6">
+              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
                 {/* Numbered Dice */}
                 {diceRoll.numbered.map((value, index) => (
                   <button
                     key={index}
                     onClick={() => setSelectedNumberedDieIndex(index)}
                     className={cn(
-                      "w-16 h-16 rounded-lg border-4 flex items-center justify-center text-2xl font-bold shadow-lg transition-all",
+                      "w-16 h-16 rounded-lg flex items-center justify-center transition-all overflow-hidden p-0 bg-transparent",
                       selectedNumberedDieIndex === index
-                        ? "border-blue-600 bg-blue-100 scale-110"
-                        : "border-gray-400 bg-white hover:border-gray-600 hover:scale-105"
+                        ? "border-[7px] border-blue-600 scale-110"
+                        : "border-2 border-transparent hover:border-gray-400 hover:scale-105"
                     )}
                     style={{
                       transform: `rotate(${diceRotations[index]}deg)`,
                     }}
                   >
-                    {value}
+                    <Image
+                      src={`${DICE_IMAGES_BASE_URL}/${NUMBERED_DICE_IMAGE_MAP[value]}`}
+                      alt={`${value}`}
+                      width={64}
+                      height={64}
+                      className="object-cover w-full h-full min-w-full min-h-full"
+                      unoptimized
+                    />
                   </button>
                 ))}
 
@@ -552,10 +570,10 @@ Also, each piece of equipment you use (meaning you have 1 or more cells filled i
                     key={index + 2}
                     onClick={() => setSelectedSlotDieIndex(index)}
                     className={cn(
-                      "w-16 h-16 rounded-lg border-4 flex items-center justify-center shadow-lg transition-all overflow-hidden",
+                      "w-16 h-16 rounded-lg flex items-center justify-center transition-all overflow-hidden p-0 bg-transparent",
                       selectedSlotDieIndex === index
-                        ? "border-blue-600 bg-blue-100 scale-110"
-                        : "border-gray-400 bg-white hover:border-gray-600 hover:scale-105"
+                        ? "border-[7px] border-blue-600 scale-110"
+                        : "border-2 border-transparent hover:border-gray-400 hover:scale-105"
                     )}
                     style={{
                       transform: `rotate(${diceRotations[index + 2]}deg)`,
@@ -566,11 +584,15 @@ Also, each piece of equipment you use (meaning you have 1 or more cells filled i
                       alt={slot}
                       width={64}
                       height={64}
-                      className="object-contain"
+                      className="object-cover w-full h-full min-w-full min-h-full"
                       unoptimized
                     />
                   </button>
                 ))}
+              </div>
+              <p className="text-sm text-gray-600 max-w-[240px] ml-4">
+                Select one numeric die and one equipment die to place. Or use a Strike to pass the turn.
+              </p>
               </div>
             </div>
           )}

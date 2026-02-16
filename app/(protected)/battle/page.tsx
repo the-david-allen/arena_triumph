@@ -32,15 +32,18 @@ interface TierStatus {
   tier: number;
   has_scouted: boolean;
   has_fought: boolean;
+  scouting_success: boolean;
+  boss_name?: string;
+  boss_image_url?: string;
 }
 
 export default function BattleSelectPage() {
   const router = useRouter();
   const [statusByTier, setStatusByTier] = useState<Record<number, TierStatus>>({
-    1: { tier: 1, has_scouted: false, has_fought: false },
-    2: { tier: 2, has_scouted: false, has_fought: false },
-    3: { tier: 3, has_scouted: false, has_fought: false },
-    4: { tier: 4, has_scouted: false, has_fought: false },
+    1: { tier: 1, has_scouted: false, has_fought: false, scouting_success: false },
+    2: { tier: 2, has_scouted: false, has_fought: false, scouting_success: false },
+    3: { tier: 3, has_scouted: false, has_fought: false, scouting_success: false },
+    4: { tier: 4, has_scouted: false, has_fought: false, scouting_success: false },
   });
   const [isLoading, setIsLoading] = useState(true);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -59,7 +62,7 @@ export default function BattleSelectPage() {
 
       const { data: rows } = await supabase
         .from("user_daily_boss_status")
-        .select("tier, has_scouted, has_fought")
+        .select("tier, has_scouted, has_fought, scouting_success")
         .eq("user_id", user.id)
         .in("tier", [1, 2, 3, 4]);
 
@@ -70,8 +73,37 @@ export default function BattleSelectPage() {
             tier: row.tier,
             has_scouted: row.has_scouted ?? false,
             has_fought: row.has_fought ?? false,
+            scouting_success: row.scouting_success ?? false,
           };
         }
+
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+        for (const row of rows) {
+          if (row.has_scouted && row.scouting_success) {
+            const { data: lineupRows } = await supabase
+              .from("daily_boss_lineup")
+              .select("boss_id")
+              .eq("lineup_date", today)
+              .eq("tier", row.tier)
+              .limit(1);
+            const lineup = lineupRows?.[0] ?? null;
+
+            if (lineup) {
+              const { data: boss } = await supabase
+                .from("bosses_lookup")
+                .select("name, image_url")
+                .eq("id", lineup.boss_id)
+                .single();
+
+              if (boss) {
+                next[row.tier].boss_name = boss.name;
+                next[row.tier].boss_image_url = boss.image_url ?? undefined;
+              }
+            }
+          }
+        }
+
         setStatusByTier(next);
       }
       setIsLoading(false);
@@ -91,9 +123,23 @@ export default function BattleSelectPage() {
     router.push(`/battle/${tier}`);
   }
 
-  function handleScoutClick(tier: number) {
+  async function handleScoutClick(tier: number) {
     const status = statusByTier[tier];
     if (status?.has_scouted) return;
+
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase
+      .from("user_daily_boss_status")
+      .upsert(
+        { user_id: user.id, tier, has_scouted: true },
+        { onConflict: "user_id,tier" }
+      );
+
     router.push(`/battle/scout/${tier}`);
   }
 
@@ -180,6 +226,8 @@ function TierCard({ tier, status, onTierClick, onScoutClick }: TierCardProps) {
   const videoSrc = TIER_VIDEO_SOURCES[tier];
   const hasFought = status?.has_fought ?? false;
   const hasScouted = status?.has_scouted ?? false;
+  const scoutingSuccess = status?.scouting_success ?? false;
+  const showBoss = hasScouted && scoutingSuccess;
 
   return (
     <div className="flex flex-col items-center gap-3">
@@ -194,7 +242,13 @@ function TierCard({ tier, status, onTierClick, onScoutClick }: TierCardProps) {
             : "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 hover:brightness-110"
         )}
         style={{ borderColor }}
-        aria-label={hasFought ? `Tier ${tier} (already fought)` : `Select Tier ${tier} boss`}
+        aria-label={
+          hasFought
+            ? `Tier ${tier} (already fought)`
+            : showBoss
+              ? `Battle ${status.boss_name ?? `Tier ${tier}`} boss`
+              : `Select Tier ${tier} boss`
+        }
       >
         {hasFought ? (
           <span
@@ -203,6 +257,22 @@ function TierCard({ tier, status, onTierClick, onScoutClick }: TierCardProps) {
           >
             ✕
           </span>
+        ) : showBoss ? (
+          <>
+            {status.boss_image_url ? (
+              <img
+                src={status.boss_image_url}
+                alt={status.boss_name ?? "Boss"}
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            ) : (
+              <span className="absolute inset-0 bg-gradient-to-b from-gray-800 to-gray-950" />
+            )}
+            <span className="absolute inset-0 bg-black/35" aria-hidden />
+            <span className="relative z-10 text-center text-sm font-semibold text-white drop-shadow-md">
+              {status.boss_name ?? `Tier ${tier} Boss`}
+            </span>
+          </>
         ) : (
           <>
             {videoSrc ? (
