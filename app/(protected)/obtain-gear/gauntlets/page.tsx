@@ -201,13 +201,8 @@ function step(gs: GameState, dt: number): void {
     }
     if (gs.pendingPour) {
       gs.pendingPour = false;
-      const hasFullOnBar = gs.mugs.some(
-        (m) => m.type === "FULL" && m.barIdx === gs.tkBarIdx
-      );
-      if (!hasFullOnBar) {
-        gs.tkState = "FILLING";
-        gs.fillTimer = MUG_FILL_TIME;
-      }
+      gs.tkState = "FILLING";
+      gs.fillTimer = MUG_FILL_TIME;
     }
   } else {
     gs.pendingMove = null;
@@ -231,12 +226,16 @@ function step(gs: GameState, dt: number): void {
   }
 
   /* 3) Spawn patrons */
+  const MIN_SPAWN_GAP = 250;
   gs.spawnTimer -= dt;
   if (gs.spawnTimer <= 0) {
     const eligible: number[] = [];
     for (let b = 0; b < NUM_BARS; b++) {
-      const cnt = gs.patrons.filter((p) => p.barIdx === b).length;
-      if (cnt < diff.maxPerBar) eligible.push(b);
+      const barPatrons = gs.patrons.filter((p) => p.barIdx === b);
+      if (barPatrons.length >= diff.maxPerBar) continue;
+      const doorX = BARS[b].xDoorCenter * BASE_W;
+      const tooClose = barPatrons.some((p) => Math.abs(p.x - doorX) < MIN_SPAWN_GAP);
+      if (!tooClose) eligible.push(b);
     }
     if (eligible.length > 0) {
       const barIdx = eligible[Math.floor(Math.random() * eligible.length)];
@@ -424,12 +423,12 @@ function renderGame(
 
   /* HUD: timer */
   if (gs.phase === "PLAYING" || gs.phase === "GAME_OVER") {
-    const hudFontSize = Math.round(HUD_H * scaleY * 0.6);
+    const hudFontSize = Math.round(HUD_H * scaleY * 1.6);
     ctx.font = `bold ${hudFontSize}px sans-serif`;
     ctx.fillStyle = "rgba(0,0,0,0.6)";
     const timerText = `${Math.floor(gs.elapsed)}`;
     const tw = ctx.measureText(timerText).width;
-    const px = 100 * scaleX;
+    const px = 0.315 * canvasW;
     const py = 80 * scaleY;
     ctx.fillRect(px - 4, py - 2, tw + 16, hudFontSize + 8);
     ctx.fillStyle = "#fff";
@@ -438,8 +437,8 @@ function renderGame(
 
   /* HUD: hearts */
   if (gs.phase === "PLAYING" || gs.phase === "GAME_OVER") {
-    const heartSize = Math.round(180 * Math.min(scaleX, scaleY));
-    const gap = Math.round(10 * Math.min(scaleX, scaleY));
+    const heartSize = Math.round(160 * Math.min(scaleX, scaleY));
+    const gap = Math.round(4 * Math.min(scaleX, scaleY));
     const margin = Math.round(20 * scaleX);
     const startX = canvasW - (LIVES_START * (heartSize + gap)) - margin;
     const hy = Math.round(12 * scaleY);
