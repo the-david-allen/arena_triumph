@@ -56,7 +56,7 @@ const BARS = [
 const DOOR_FAIL_X = [0.2353, 0.1727, 0.1102, 0.0458];
 const KEG_FAIL_X = [0.6545, 0.7199, 0.7750, 0.8375];
 
-const MUG_FILL_TIME = 1.5;
+const MUG_FILL_TIME = 1.25;
 const FULL_MUG_SPEED = 520;
 const EMPTY_MUG_SPEED = 300;
 const PATRON_SPEED_START = 80;
@@ -121,13 +121,13 @@ function getDifficulty(t: number) {
   const speedT = Math.min(t / 300, 1);
   const spawnT = Math.min(t / 200, 1);
   let maxPerBar: number;
-  if (t < 15) maxPerBar = 1;
-  else if (t < 45) maxPerBar = 2;
-  else if (t < 90) maxPerBar = 3;
+  if (t < 20) maxPerBar = 1;
+  else if (t < 60) maxPerBar = 2;
+  else if (t < 100) maxPerBar = 3;
   else maxPerBar = 4;
   return {
     patronSpeed: PATRON_SPEED_START + (PATRON_SPEED_MAX - PATRON_SPEED_START) * speedT,
-    spawnInterval: 4.0 - 2.5 * spawnT,
+    spawnInterval: 4.0 - 2 * spawnT,
     maxPerBar,
   };
 }
@@ -232,7 +232,7 @@ function step(gs: GameState, dt: number): void {
   }
 
   /* 3) Spawn patrons */
-  const MIN_SPAWN_GAP = 250;
+  const MIN_SPAWN_GAP = 300;
   gs.spawnTimer -= dt;
   if (gs.spawnTimer <= 0) {
     const eligible: number[] = [];
@@ -437,7 +437,7 @@ function renderGame(
     ctx.fillStyle = "#fff";
     const timerText = `${Math.floor(gs.elapsed)}`;
     const px = 0.315 * canvasW;
-    const py = 0.024 * canvasH;
+    const py = 0.020 * canvasH;
     ctx.fillText(timerText, px + 4, py + hudFontSize);
   }
 
@@ -458,13 +458,13 @@ function renderGame(
   for (const m of gs.mugs) {
     const bar = BARS[m.barIdx];
     const sx = m.x * scaleX;
-    const sy = bar.y * BASE_H * scaleY;
+    const sy = bar.y * BASE_H * scaleY - 8;
     const img = m.type === "FULL" ? imgs.mug : imgs.mugEmpty;
     ctx.drawImage(img, sx - mugDrawSize / 2, sy - mugDrawSize / 2, mugDrawSize, mugDrawSize);
   }
 
   /* Patrons */
-  const patronDrawSize = Math.round(320 * Math.min(scaleX, scaleY));
+  const patronDrawSize = Math.round(300 * Math.min(scaleX, scaleY));
   for (const p of gs.patrons) {
     const bar = BARS[p.barIdx];
     const sx = p.x * scaleX;

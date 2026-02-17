@@ -13,8 +13,10 @@ import {
 import {
   fetchUserProfile,
   fetchAllContestants,
+  fetchLevelProgress,
   type UserProfile,
   type Contestant,
+  type LevelProgress,
 } from "@/lib/inspect";
 
 export const runtime = "edge";
@@ -134,6 +136,9 @@ export default function InspectPage() {
     Record<string, InventoryItem>
   >({});
   const [contestants, setContestants] = React.useState<Contestant[]>([]);
+  const [levelProgress, setLevelProgress] = React.useState<LevelProgress | null>(
+    null
+  );
   const [isLoading, setIsLoading] = React.useState(true);
 
   // Load current user and contestants on mount
@@ -181,6 +186,13 @@ export default function InspectPage() {
 
       setUserProfile(profile);
       setEquippedItems(equipped);
+
+      if (profile) {
+        const progress = await fetchLevelProgress(profile.level, profile.xp);
+        if (!cancelled) setLevelProgress(progress);
+      } else {
+        setLevelProgress(null);
+      }
     }
 
     loadUserData();
@@ -222,6 +234,32 @@ export default function InspectPage() {
             <p className="text-lg text-muted-foreground">
               Level: {userProfile?.level ?? 1}
             </p>
+            {levelProgress != null && (
+              <div className="mx-auto mt-2 max-w-xs">
+                <div
+                  className="h-3 w-full overflow-hidden rounded-full bg-muted"
+                  role="progressbar"
+                  aria-valuenow={levelProgress.percent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Progress to next level"
+                >
+                  <div
+                    className="h-full rounded-full bg-primary transition-all duration-300"
+                    style={{ width: `${levelProgress.percent}%` }}
+                  />
+                </div>
+                {levelProgress.xpForNextLevel != null ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {userProfile?.xp ?? 0} / {levelProgress.xpForNextLevel} XP
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Max Level
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Equipment Layout - Fixed grid matching wireframe */}

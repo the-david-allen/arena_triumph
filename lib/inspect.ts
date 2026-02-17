@@ -4,7 +4,14 @@ export interface UserProfile {
   id: string;
   username: string | null;
   level: number;
+  xp: number;
   user_image_url: string | null;
+}
+
+export interface LevelProgress {
+  xpForCurrentLevel: number;
+  xpForNextLevel: number | null;
+  percent: number;
 }
 
 export interface Contestant {
@@ -22,7 +29,7 @@ export async function fetchUserProfile(
 
   const { data, error } = await supabase
     .from("user_profiles")
-    .select("id, username, level, user_image_url")
+    .select("id, username, level, xp, user_image_url")
     .eq("id", userId)
     .single();
 
@@ -35,7 +42,58 @@ export async function fetchUserProfile(
     id: data.id,
     username: data.username,
     level: data.level ?? 1,
+    xp: Number(data.xp ?? 0),
     user_image_url: data.user_image_url,
+  };
+}
+
+/**
+ * Fetches XP thresholds for current and next level, and computes progress percent.
+ */
+export async function fetchLevelProgress(
+  level: number,
+  userXp: number
+): Promise<LevelProgress> {
+  const supabase = createClient();
+
+  const [currentResult, nextResult] = await Promise.all([
+    supabase
+      .from("levels_lookup")
+      .select("xp_required")
+      .eq("level", level)
+      .maybeSingle(),
+    supabase
+      .from("levels_lookup")
+      .select("xp_required")
+      .eq("level", level + 1)
+      .maybeSingle(),
+  ]);
+
+  const xpForCurrentLevel = Number(
+    currentResult.data?.xp_required ?? 0
+  );
+  const xpForNextLevel = nextResult.data?.xp_required != null
+    ? Number(nextResult.data.xp_required)
+    : null;
+
+  let percent: number;
+  if (xpForNextLevel == null) {
+    percent = 100;
+  } else {
+    const range = xpForNextLevel - xpForCurrentLevel;
+    percent =
+      range <= 0
+        ? 100
+        : Math.min(
+            100,
+            Math.max(0, ((userXp - xpForCurrentLevel) / range) * 100)
+          );
+  }
+
+  return {
+    xpForCurrentLevel,
+    xpForNextLevel,
+    percent,
   };
 }
 
