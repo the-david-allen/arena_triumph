@@ -21,7 +21,11 @@ import {
 } from "@/lib/gauntlets-game";
 import { checkUserHasItem, addXpToUser, RARITY_XP } from "@/lib/inventory";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
+import { BACKGROUND_MUSIC_VOLUME } from "@/lib/sounds";
 import { useRouter } from "next/navigation";
+
+const GAUNTLETS_BACKGROUND_MUSIC_URL =
+  "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/sounds/gauntlets_background.mp3";
 
 /* ─────────────────────────── Asset URLs ─────────────────────────── */
 const CDN_BASE = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/gauntlets_game";
@@ -560,6 +564,7 @@ export default function GauntletsPage() {
   const lastTimeRef = React.useRef<number | null>(null);
   const accumulatorRef = React.useRef(0);
   const gameOverHandledRef = React.useRef(false);
+  const gauntletsMusicRef = React.useRef<HTMLAudioElement | null>(null);
 
   /* Load play count on mount */
   React.useEffect(() => {
@@ -728,15 +733,46 @@ export default function GauntletsPage() {
     setRewardXp(null);
     setFinalSeconds(0);
     setIsGameActive(true);
+
+    /* Start background music (same user gesture as Play Game for autoplay) */
+    try {
+      if (!gauntletsMusicRef.current) {
+        const audio = new Audio(GAUNTLETS_BACKGROUND_MUSIC_URL);
+        audio.volume = BACKGROUND_MUSIC_VOLUME;
+        audio.loop = true;
+        gauntletsMusicRef.current = audio;
+      }
+      const music = gauntletsMusicRef.current;
+      music.currentTime = 0;
+      void music.play();
+    } catch {
+      /* Autoplay blocked or SSR - fail silently */
+    }
+
     setTimeout(() => {
       resizeCanvas();
       rafRef.current = requestAnimationFrame(gameLoop);
     }, 0);
   }, [gameLoop, resizeCanvas, stopLoop]);
 
+  /* Stop gauntlets background music when game ends */
+  React.useEffect(() => {
+    if (!isGameActive && gauntletsMusicRef.current) {
+      gauntletsMusicRef.current.pause();
+      gauntletsMusicRef.current.currentTime = 0;
+    }
+  }, [isGameActive]);
+
   /* Cleanup on unmount */
   React.useEffect(() => {
-    return () => stopLoop();
+    return () => {
+      stopLoop();
+      if (gauntletsMusicRef.current) {
+        gauntletsMusicRef.current.pause();
+        gauntletsMusicRef.current.currentTime = 0;
+        gauntletsMusicRef.current = null;
+      }
+    };
   }, [stopLoop]);
 
   /* Input: keyboard */
