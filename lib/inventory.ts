@@ -138,56 +138,104 @@ export async function addXpToUser(
   await checkAndUpdateLevel(supabase, userId, newXp, currentLevel);
 }
 
-async function fetchGearFromLookup(
-  gearId: string,
-  gearType: string
-): Promise<GearDetails | null> {
-  const supabase = createClient();
-  const table = GEAR_TYPE_TO_LOOKUP_TABLE[gearType];
-  if (!table) return null;
+/**
+ * Batch-fetches affinity names for a set of UUIDs in a single query.
+ * Returns a Map from affinity UUID to affinity name.
+ */
+async function batchGetAffinityNames(
+  supabase: ReturnType<typeof createClient>,
+  affinityIds: string[]
+): Promise<Map<string, string>> {
+  if (affinityIds.length === 0) return new Map();
 
-  const { data, error } = await supabase
-    .from(table)
-    .select(
-      "id, name, image_url, strength, rarity, primary_affinity, secondary_affinity"
-    )
-    .eq("id", gearId)
-    .single();
-
-  if (error || !data) return null;
-
-  const primaryAffinityName = data.primary_affinity
-    ? await getAffinityName(data.primary_affinity)
-    : null;
-  const secondaryAffinityName = data.secondary_affinity
-    ? await getAffinityName(data.secondary_affinity)
-    : null;
-
-  return {
-    id: data.id,
-    name: data.name,
-    image_url: data.image_url,
-    strength: data.strength ?? 0,
-    rarity: data.rarity ?? "Base",
-    primary_affinity: primaryAffinityName,
-    secondary_affinity: secondaryAffinityName,
-  };
-}
-
-async function getAffinityName(affinityId: string): Promise<string | null> {
-  const supabase = createClient();
   const { data, error } = await supabase
     .from("affinity_lookup")
-    .select("affinity_name")
-    .eq("id", affinityId)
-    .single();
+    .select("id, affinity_name")
+    .in("id", affinityIds);
 
-  if (error || !data) return null;
-  return data.affinity_name;
+  if (error || !data) return new Map();
+  return new Map(data.map((a) => [a.id, a.affinity_name]));
+}
+
+interface RawGearRow {
+  id: string;
+  name: string;
+  image_url: string | null;
+  strength: number;
+  rarity: string;
+  primary_affinity: string | null;
+  secondary_affinity: string | null;
 }
 
 /**
- * Fetches all equipped items for a user, organized by slot
+ * Batch-fetches gear details for multiple items grouped by gear type,
+ * then resolves all affinity names in a single query.
+ */
+async function batchFetchGearDetails(
+  supabase: ReturnType<typeof createClient>,
+  rows: { gear_id: string; gear_type: string }[]
+): Promise<Map<string, GearDetails>> {
+  if (rows.length === 0) return new Map();
+
+  const grouped = new Map<string, string[]>();
+  for (const row of rows) {
+    const existing = grouped.get(row.gear_type);
+    if (existing) {
+      existing.push(row.gear_id);
+    } else {
+      grouped.set(row.gear_type, [row.gear_id]);
+    }
+  }
+
+  const rawGearByIdPromises = [...grouped.entries()].map(
+    async ([gearType, gearIds]) => {
+      const table = GEAR_TYPE_TO_LOOKUP_TABLE[gearType];
+      if (!table) return [];
+      const { data, error } = await supabase
+        .from(table)
+        .select(
+          "id, name, image_url, strength, rarity, primary_affinity, secondary_affinity"
+        )
+        .in("id", gearIds);
+      if (error || !data) return [];
+      return data as RawGearRow[];
+    }
+  );
+
+  const rawGearArrays = await Promise.all(rawGearByIdPromises);
+  const allRawGear = rawGearArrays.flat();
+
+  const affinityIds = new Set<string>();
+  for (const gear of allRawGear) {
+    if (gear.primary_affinity) affinityIds.add(gear.primary_affinity);
+    if (gear.secondary_affinity) affinityIds.add(gear.secondary_affinity);
+  }
+
+  const affinityMap = await batchGetAffinityNames(supabase, [...affinityIds]);
+
+  const result = new Map<string, GearDetails>();
+  for (const gear of allRawGear) {
+    result.set(gear.id, {
+      id: gear.id,
+      name: gear.name,
+      image_url: gear.image_url,
+      strength: gear.strength ?? 0,
+      rarity: gear.rarity ?? "Base",
+      primary_affinity: gear.primary_affinity
+        ? affinityMap.get(gear.primary_affinity) ?? null
+        : null,
+      secondary_affinity: gear.secondary_affinity
+        ? affinityMap.get(gear.secondary_affinity) ?? null
+        : null,
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Fetches all equipped items for a user, organized by slot.
+ * Uses batch queries for gear details and affinity names.
  */
 export async function fetchEquippedItems(
   userId: string
@@ -200,11 +248,13 @@ export async function fetchEquippedItems(
     .eq("user_id", userId)
     .eq("is_equipped", true);
 
-  if (error || !inventoryRows) return {};
+  if (error || !inventoryRows || inventoryRows.length === 0) return {};
+
+  const detailsMap = await batchFetchGearDetails(supabase, inventoryRows);
 
   const equippedBySlot: Record<string, InventoryItem> = {};
   for (const row of inventoryRows) {
-    const details = await fetchGearFromLookup(row.gear_id, row.gear_type);
+    const details = detailsMap.get(row.gear_id);
     if (details) {
       equippedBySlot[row.gear_type] = {
         gear_id: row.gear_id,
@@ -218,7 +268,8 @@ export async function fetchEquippedItems(
 }
 
 /**
- * Fetches all user items for a given slot
+ * Fetches all user items for a given slot.
+ * Uses batch queries for gear details and affinity names.
  */
 export async function fetchInventoryBySlot(
   userId: string,
@@ -232,11 +283,13 @@ export async function fetchInventoryBySlot(
     .eq("user_id", userId)
     .eq("gear_type", gearType);
 
-  if (error || !inventoryRows) return [];
+  if (error || !inventoryRows || inventoryRows.length === 0) return [];
+
+  const detailsMap = await batchFetchGearDetails(supabase, inventoryRows);
 
   const items: InventoryItem[] = [];
   for (const row of inventoryRows) {
-    const details = await fetchGearFromLookup(row.gear_id, row.gear_type);
+    const details = detailsMap.get(row.gear_id);
     if (details) {
       items.push({
         gear_id: row.gear_id,
@@ -250,13 +303,18 @@ export async function fetchInventoryBySlot(
 }
 
 /**
- * Fetches gear details for display
+ * Fetches gear details for a single item.
+ * Uses batch helper internally for consistency.
  */
 export async function fetchGearDetails(
   gearId: string,
   gearType: string
 ): Promise<GearDetails | null> {
-  return fetchGearFromLookup(gearId, gearType);
+  const supabase = createClient();
+  const detailsMap = await batchFetchGearDetails(supabase, [
+    { gear_id: gearId, gear_type: gearType },
+  ]);
+  return detailsMap.get(gearId) ?? null;
 }
 
 /**

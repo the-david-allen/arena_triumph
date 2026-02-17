@@ -44,6 +44,8 @@ export default function InventoryPage() {
     xpVal: number;
   } | null>(null);
 
+  const userIdRef = React.useRef<string | null>(null);
+
   React.useEffect(() => {
     if (!showLevelUp) return;
     const t = setTimeout(() => setShowLevelUp(false), 2000);
@@ -51,7 +53,7 @@ export default function InventoryPage() {
   }, [showLevelUp]);
 
   const loadEquippedItems = React.useCallback(async () => {
-    const userId = await getCurrentUserId();
+    const userId = userIdRef.current;
     if (!userId) return {};
     const equipped = await fetchEquippedItems(userId);
     setEquippedBySlot(equipped);
@@ -60,7 +62,7 @@ export default function InventoryPage() {
 
   const loadInventoryForSlot = React.useCallback(
     async (gearType: string) => {
-      const userId = await getCurrentUserId();
+      const userId = userIdRef.current;
       if (!userId) return [];
       const items = await fetchInventoryBySlot(userId, gearType);
       setInventoryItems(items);
@@ -74,7 +76,13 @@ export default function InventoryPage() {
     async function init() {
       setIsLoading(true);
       try {
-        await loadEquippedItems();
+        const userId = await getCurrentUserId();
+        if (cancelled) return;
+        userIdRef.current = userId;
+        if (userId) {
+          const equipped = await fetchEquippedItems(userId);
+          if (!cancelled) setEquippedBySlot(equipped);
+        }
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -83,7 +91,7 @@ export default function InventoryPage() {
     return () => {
       cancelled = true;
     };
-  }, [loadEquippedItems]);
+  }, []);
 
   const handleSlotClick = React.useCallback(
     async (gearType: string) => {
@@ -101,25 +109,41 @@ export default function InventoryPage() {
 
   const handleEquip = React.useCallback(async () => {
     if (!selectedInventoryItem) return;
-    const userId = await getCurrentUserId();
+    const userId = userIdRef.current;
     if (!userId) return;
-    const equippedGearId = selectedInventoryItem.gear_id;
+
+    const itemToEquip = selectedInventoryItem;
+    const gearType = itemToEquip.gear_type;
+
+    setEquippedBySlot((prev) => ({
+      ...prev,
+      [gearType]: { ...itemToEquip, is_equipped: true },
+    }));
+    setInventoryItems((prev) =>
+      prev.map((item) => ({
+        ...item,
+        is_equipped: item.gear_id === itemToEquip.gear_id,
+      }))
+    );
+    setSelectedInventoryItem({ ...itemToEquip, is_equipped: true });
     setIsActionLoading(true);
+
     try {
-      await equipItem(
-        userId,
-        selectedInventoryItem.gear_id,
-        selectedInventoryItem.gear_type
-      );
-      await loadEquippedItems();
-      if (selectedSlot) {
-        const items = await loadInventoryForSlot(selectedSlot);
-        setInventoryItems(items);
-        const updated = items.find((i) => i.gear_id === equippedGearId);
+      await equipItem(userId, itemToEquip.gear_id, gearType);
+      const [, items] = await Promise.all([
+        loadEquippedItems(),
+        selectedSlot ? loadInventoryForSlot(selectedSlot) : Promise.resolve([] as InventoryItem[]),
+      ]);
+      if (selectedSlot && items) {
+        const updated = items.find((i) => i.gear_id === itemToEquip.gear_id);
         if (updated) setSelectedInventoryItem(updated);
       }
     } catch (err) {
       console.error("Failed to equip:", err);
+      await Promise.all([
+        loadEquippedItems(),
+        selectedSlot ? loadInventoryForSlot(selectedSlot) : Promise.resolve(),
+      ]);
     } finally {
       setIsActionLoading(false);
     }
@@ -137,25 +161,40 @@ export default function InventoryPage() {
 
   const handleDiscardConfirm = React.useCallback(async () => {
     if (!pendingDiscard) return;
-    const userId = await getCurrentUserId();
+    const userId = userIdRef.current;
     if (!userId) return;
+
+    const discardedItem = pendingDiscard.item;
+    const discardXp = pendingDiscard.xpVal;
+
+    setShowDiscardConfirm(false);
+    setPendingDiscard(null);
+    setSelectedInventoryItem(null);
+    setInventoryItems((prev) =>
+      prev.filter((item) => item.gear_id !== discardedItem.gear_id)
+    );
+    if (discardedItem.is_equipped) {
+      setEquippedBySlot((prev) => {
+        const next = { ...prev };
+        delete next[discardedItem.gear_type];
+        return next;
+      });
+    }
+
     setIsActionLoading(true);
     try {
-      const result = await discardItem(
-        userId,
-        pendingDiscard.item.gear_id,
-        pendingDiscard.xpVal
-      );
-      setShowDiscardConfirm(false);
-      setPendingDiscard(null);
-      setSelectedInventoryItem(null);
+      const result = await discardItem(userId, discardedItem.gear_id, discardXp);
       if (result.leveledUp) setShowLevelUp(true);
-      await loadEquippedItems();
-      if (selectedSlot) {
-        await loadInventoryForSlot(selectedSlot);
-      }
+      await Promise.all([
+        loadEquippedItems(),
+        selectedSlot ? loadInventoryForSlot(selectedSlot) : Promise.resolve(),
+      ]);
     } catch (err) {
       console.error("Failed to discard:", err);
+      await Promise.all([
+        loadEquippedItems(),
+        selectedSlot ? loadInventoryForSlot(selectedSlot) : Promise.resolve(),
+      ]);
     } finally {
       setIsActionLoading(false);
     }
