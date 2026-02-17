@@ -32,8 +32,13 @@ const ASSET_URLS = {
   tkRight: `${CDN_BASE}/tavernkeeper_right_facing.png`,
   mug: `${CDN_BASE}/mug.png`,
   mugEmpty: `${CDN_BASE}/mug_empty.png`,
-  patron: `${CDN_BASE}/tavernkeeper_left_facing.png`,
+  patron1: `${CDN_BASE}/patron1.png`,
+  patron2: `${CDN_BASE}/patron2.png`,
+  patron3: `${CDN_BASE}/patron3.png`,
 } as const;
+
+const PATRON_IMAGES = ["patron1", "patron2", "patron3"] as const;
+type PatronImageKey = (typeof PATRON_IMAGES)[number];
 
 /* ─────────────────────────── Game Constants ──────────────────────── */
 const BASE_W = 2048;
@@ -78,6 +83,7 @@ interface Patron {
   slideRemaining: number;
   pauseTimer: number;
   linkedEmptyMugId: number | null;
+  imageKey: PatronImageKey;
 }
 
 interface Mug {
@@ -248,6 +254,7 @@ function step(gs: GameState, dt: number): void {
         slideRemaining: 0,
         pauseTimer: 0,
         linkedEmptyMugId: null,
+        imageKey: PATRON_IMAGES[Math.floor(Math.random() * PATRON_IMAGES.length)],
       });
     }
     gs.spawnTimer = diff.spawnInterval * (0.7 + Math.random() * 0.6);
@@ -403,7 +410,9 @@ interface LoadedImages {
   tkRight: HTMLImageElement;
   mug: HTMLImageElement;
   mugEmpty: HTMLImageElement;
-  patron: HTMLImageElement;
+  patron1: HTMLImageElement;
+  patron2: HTMLImageElement;
+  patron3: HTMLImageElement;
 }
 
 function renderGame(
@@ -429,7 +438,7 @@ function renderGame(
     const timerText = `${Math.floor(gs.elapsed)}`;
     const tw = ctx.measureText(timerText).width;
     const px = 0.315 * canvasW;
-    const py = 80 * scaleY;
+    const py = 0.03 * canvasH;
     ctx.fillRect(px - 4, py - 2, tw + 16, hudFontSize + 8);
     ctx.fillStyle = "#fff";
     ctx.fillText(timerText, px + 4, py + hudFontSize);
@@ -448,7 +457,7 @@ function renderGame(
   }
 
   /* Mugs */
-  const mugDrawSize = Math.round(250 * Math.min(scaleX, scaleY));
+  const mugDrawSize = Math.round(240 * Math.min(scaleX, scaleY));
   for (const m of gs.mugs) {
     const bar = BARS[m.barIdx];
     const sx = m.x * scaleX;
@@ -458,13 +467,14 @@ function renderGame(
   }
 
   /* Patrons */
-  const patronDrawSize = Math.round(400 * Math.min(scaleX, scaleY));
+  const patronDrawSize = Math.round(360 * Math.min(scaleX, scaleY));
   for (const p of gs.patrons) {
     const bar = BARS[p.barIdx];
     const sx = p.x * scaleX;
-    const sy = bar.y * BASE_H * scaleY;
+    const sy = bar.y * BASE_H * scaleY - 40;
+    const patronImg = imgs[p.imageKey];
     ctx.drawImage(
-      imgs.patron,
+      patronImg,
       sx - patronDrawSize / 2,
       sy - patronDrawSize / 2,
       patronDrawSize,
@@ -512,7 +522,9 @@ function loadImages(): Promise<LoadedImages> {
     "tkRight",
     "mug",
     "mugEmpty",
-    "patron",
+    "patron1",
+    "patron2",
+    "patron3",
   ];
   const map: Record<string, HTMLImageElement> = {};
   return Promise.all(
