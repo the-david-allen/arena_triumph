@@ -430,17 +430,18 @@ function renderGame(
 
   /* HUD: hearts */
   if (gs.phase === "PLAYING" || gs.phase === "GAME_OVER") {
-    const heartSize = Math.round(36 * scaleY);
-    const gap = Math.round(4 * scaleX);
-    const startX = canvasW - (gs.lives * (heartSize + gap)) - 10 * scaleX;
-    const hy = 8 * scaleY;
+    const heartSize = Math.round(1000 * Math.min(scaleX, scaleY));
+    const gap = Math.round(12 * Math.min(scaleX, scaleY));
+    const margin = Math.round(20 * scaleX);
+    const startX = canvasW - (LIVES_START * (heartSize + gap)) - margin;
+    const hy = Math.round(12 * scaleY);
     for (let i = 0; i < gs.lives; i++) {
       ctx.drawImage(imgs.heart, startX + i * (heartSize + gap), hy, heartSize, heartSize);
     }
   }
 
   /* Mugs */
-  const mugDrawSize = Math.round(400 * Math.min(scaleX, scaleY));
+  const mugDrawSize = Math.round(1800 * Math.min(scaleX, scaleY));
   for (const m of gs.mugs) {
     const bar = BARS[m.barIdx];
     const sx = m.x * scaleX;
@@ -450,7 +451,7 @@ function renderGame(
   }
 
   /* Patrons */
-  const patronDrawSize = Math.round(224 * Math.min(scaleX, scaleY));
+  const patronDrawSize = Math.round(400 * Math.min(scaleX, scaleY));
   for (const p of gs.patrons) {
     const bar = BARS[p.barIdx];
     const sx = p.x * scaleX;
@@ -465,7 +466,7 @@ function renderGame(
   }
 
   /* Tavernkeeper */
-  const tkDrawSize = Math.round(256 * Math.min(scaleX, scaleY));
+  const tkDrawSize = Math.round(400 * Math.min(scaleX, scaleY));
   if (gs.phase === "PLAYING" || gs.phase === "GAME_OVER" || gs.phase === "COUNTDOWN") {
     const bar = BARS[gs.tkBarIdx];
     const tx = bar.xKegCenter * BASE_W * scaleX;
