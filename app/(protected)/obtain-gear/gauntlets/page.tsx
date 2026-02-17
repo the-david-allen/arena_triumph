@@ -281,6 +281,10 @@ function step(gs: GameState, dt: number): void {
         p.x -= move;
         p.slideRemaining -= move;
         if (p.x <= doorX) {
+          if (p.linkedEmptyMugId !== null) {
+            const mi = gs.mugs.findIndex((m) => m.id === p.linkedEmptyMugId);
+            if (mi >= 0) gs.mugs.splice(mi, 1);
+          }
           gs.patrons.splice(i, 1);
           break;
         }
@@ -292,6 +296,10 @@ function step(gs: GameState, dt: number): void {
       }
       case "PAUSE": {
         if (p.x <= doorX) {
+          if (p.linkedEmptyMugId !== null) {
+            const mi = gs.mugs.findIndex((m) => m.id === p.linkedEmptyMugId);
+            if (mi >= 0) gs.mugs.splice(mi, 1);
+          }
           gs.patrons.splice(i, 1);
           break;
         }
@@ -419,10 +427,10 @@ function renderGame(
     const hudFontSize = Math.round(HUD_H * scaleY * 0.6);
     ctx.font = `bold ${hudFontSize}px sans-serif`;
     ctx.fillStyle = "rgba(0,0,0,0.6)";
-    const timerText = `Time Lasted: ${Math.floor(gs.elapsed)}s`;
+    const timerText = `${Math.floor(gs.elapsed)}`;
     const tw = ctx.measureText(timerText).width;
-    const px = 10 * scaleX;
-    const py = 8 * scaleY;
+    const px = 100 * scaleX;
+    const py = 80 * scaleY;
     ctx.fillRect(px - 4, py - 2, tw + 16, hudFontSize + 8);
     ctx.fillStyle = "#fff";
     ctx.fillText(timerText, px + 4, py + hudFontSize);
@@ -430,8 +438,8 @@ function renderGame(
 
   /* HUD: hearts */
   if (gs.phase === "PLAYING" || gs.phase === "GAME_OVER") {
-    const heartSize = Math.round(1000 * Math.min(scaleX, scaleY));
-    const gap = Math.round(12 * Math.min(scaleX, scaleY));
+    const heartSize = Math.round(180 * Math.min(scaleX, scaleY));
+    const gap = Math.round(10 * Math.min(scaleX, scaleY));
     const margin = Math.round(20 * scaleX);
     const startX = canvasW - (LIVES_START * (heartSize + gap)) - margin;
     const hy = Math.round(12 * scaleY);
@@ -441,7 +449,7 @@ function renderGame(
   }
 
   /* Mugs */
-  const mugDrawSize = Math.round(1800 * Math.min(scaleX, scaleY));
+  const mugDrawSize = Math.round(250 * Math.min(scaleX, scaleY));
   for (const m of gs.mugs) {
     const bar = BARS[m.barIdx];
     const sx = m.x * scaleX;
@@ -469,7 +477,7 @@ function renderGame(
   const tkDrawSize = Math.round(400 * Math.min(scaleX, scaleY));
   if (gs.phase === "PLAYING" || gs.phase === "GAME_OVER" || gs.phase === "COUNTDOWN") {
     const bar = BARS[gs.tkBarIdx];
-    const tx = bar.xKegCenter * BASE_W * scaleX;
+    const tx =(bar.xKegCenter * BASE_W * scaleX) - 50;
     const ty = bar.y * BASE_H * scaleY;
     const tkImg = gs.tkState === "FILLING" ? imgs.tkRight : imgs.tkLeft;
     ctx.drawImage(tkImg, tx - tkDrawSize / 2, ty - tkDrawSize / 2, tkDrawSize, tkDrawSize);
