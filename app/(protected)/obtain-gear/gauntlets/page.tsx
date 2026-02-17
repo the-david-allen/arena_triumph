@@ -434,13 +434,10 @@ function renderGame(
   if (gs.phase === "PLAYING" || gs.phase === "GAME_OVER") {
     const hudFontSize = Math.round(HUD_H * scaleY * 1.6);
     ctx.font = `bold ${hudFontSize}px sans-serif`;
-    ctx.fillStyle = "rgba(0,0,0,0.6)";
-    const timerText = `${Math.floor(gs.elapsed)}`;
-    const tw = ctx.measureText(timerText).width;
-    const px = 0.315 * canvasW;
-    const py = 0.03 * canvasH;
-    ctx.fillRect(px - 4, py - 2, tw + 16, hudFontSize + 8);
     ctx.fillStyle = "#fff";
+    const timerText = `${Math.floor(gs.elapsed)}`;
+    const px = 0.315 * canvasW;
+    const py = 0.024 * canvasH;
     ctx.fillText(timerText, px + 4, py + hudFontSize);
   }
 
@@ -467,7 +464,7 @@ function renderGame(
   }
 
   /* Patrons */
-  const patronDrawSize = Math.round(360 * Math.min(scaleX, scaleY));
+  const patronDrawSize = Math.round(320 * Math.min(scaleX, scaleY));
   for (const p of gs.patrons) {
     const bar = BARS[p.barIdx];
     const sx = p.x * scaleX;
