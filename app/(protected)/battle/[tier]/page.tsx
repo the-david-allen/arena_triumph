@@ -15,7 +15,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { CombatantArea } from "@/components/battle/CombatantArea";
 import { FightStatusDisplay } from "@/components/battle/FightStatusDisplay";
-import { DebugWindow } from "@/components/battle/DebugWindow";
 import { PopTheLock, type HitAccuracy } from "@/components/battle/PopTheLock";
 import { BACKGROUND_MUSIC_VOLUME } from "@/lib/sounds";
 
@@ -363,11 +362,6 @@ export default function BattleTierPage() {
           currentHealth={bossHealth}
           maxHealth={boss?.health ?? 1}
         />
-      </div>
-
-      {/* Debug */}
-      <div className="flex justify-center">
-        <DebugWindow stats={stats} />
       </div>
 
       {/* Level-up toast */}

@@ -38,6 +38,7 @@ interface RoundData {
     weakAgainst: number;
   };
   highlightedTileIndex: number;
+  highlightType: "strong" | "weak";
 }
 
 export default function LeggingsPage() {
@@ -234,10 +235,12 @@ export default function LeggingsPage() {
     const feedback = calculateFeedback(guess, answer, currentHighlightedTileIndex);
 
     // Add round to history (prepend so newest appears above)
+    const highlightType = (rounds.length + 1) % 2 === 1 ? "strong" : "weak";
     const newRound: RoundData = {
       guess: [...guess],
       feedback,
       highlightedTileIndex: currentHighlightedTileIndex,
+      highlightType,
     };
     setRounds([newRound, ...rounds]);
 
@@ -321,7 +324,7 @@ export default function LeggingsPage() {
 
   const rulesText = `A random set of 5 Affinities has been chosen as the answer.  Take a guess and learn how many affinities you guessed are an exact match and how many match but in the wrong location.
 
-Each round, a random guess slot is highlighted and you will also learn which affinities in the answer are strong against or weak against the affinity guessed in that slot.
+Each round, a random guess slot is highlighted. You will learn either how many affinities in the answer that slot's affinity is strong against, or how many it is weak against, alternating each round.
 
 Try to guess in as few rounds as possible.  Good luck!`;
 
@@ -441,6 +444,12 @@ Try to guess in as few rounds as possible.  Good luck!`;
               {currentRoundGuess.map((affinity, tileIndex) => {
                 const affinityName = affinity ? (affinity.affinity_name as string).toLowerCase() : null;
                 const isHighlighted = tileIndex === currentHighlightedTileIndex;
+                const currentRoundIsStrong = (rounds.length + 1) % 2 === 1;
+                const highlightClasses = isHighlighted
+                  ? currentRoundIsStrong
+                    ? "border-4 border-red-600 bg-red-50 ring-4 ring-red-400"
+                    : "border-4 border-blue-600 bg-blue-50 ring-4 ring-blue-400"
+                  : "border-2 border-gray-400 bg-white hover:border-gray-600";
                 return (
                   <div
                     key={tileIndex}
@@ -450,9 +459,7 @@ Try to guess in as few rounds as possible.  Good luck!`;
                     className={cn(
                       "w-16 h-16 rounded-lg flex items-center justify-center transition-all",
                       !isGameEnding && "cursor-pointer hover:scale-110",
-                      isHighlighted
-                        ? "border-4 border-red-600 bg-red-50 ring-4 ring-red-400"
-                        : "border-2 border-gray-400 bg-white hover:border-gray-600",
+                      highlightClasses,
                       isGameEnding && "opacity-50 cursor-not-allowed"
                     )}
                   >
@@ -488,14 +495,17 @@ Try to guess in as few rounds as possible.  Good luck!`;
                   {round.guess.map((affinity, tileIndex) => {
                     const affinityName = affinity ? (affinity.affinity_name as string).toLowerCase() : null;
                     const isHighlighted = tileIndex === round.highlightedTileIndex;
+                    const roundHighlightClasses = isHighlighted
+                      ? round.highlightType === "strong"
+                        ? "border-4 border-red-600 bg-red-50 ring-4 ring-red-400"
+                        : "border-4 border-blue-600 bg-blue-50 ring-4 ring-blue-400"
+                      : "border-2 border-gray-400 bg-white";
                     return (
                       <div
                         key={tileIndex}
                         className={cn(
                           "w-16 h-16 rounded-lg flex items-center justify-center",
-                          isHighlighted
-                            ? "border-4 border-red-600 bg-red-50 ring-4 ring-red-400"
-                            : "border-2 border-gray-400 bg-white"
+                          roundHighlightClasses
                         )}
                       >
                         {affinity && affinityName && (
@@ -518,34 +528,38 @@ Try to guess in as few rounds as possible.  Good luck!`;
                     <div>Misplaced Match: {round.feedback.misplacedMatches}</div>
                   </div>
                   <div className="space-y-1">
-                    <div className="flex items-center gap-1">
-                      {round.guess[round.highlightedTileIndex] && (
-                        <Image
-                          src={`${CDN_BASE_URL}/${(round.guess[round.highlightedTileIndex]!.affinity_name as string).toLowerCase()}.jpg`}
-                          alt={round.guess[round.highlightedTileIndex]!.affinity_name as string}
-                          width={20}
-                          height={20}
-                          className="w-5 h-5 object-cover rounded"
-                          unoptimized
-                        />
-                      )}
-                      <span> is strong against: </span>
-                      <span>{round.feedback.strongAgainst}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {round.guess[round.highlightedTileIndex] && (
-                        <Image
-                          src={`${CDN_BASE_URL}/${(round.guess[round.highlightedTileIndex]!.affinity_name as string).toLowerCase()}.jpg`}
-                          alt={round.guess[round.highlightedTileIndex]!.affinity_name as string}
-                          width={20}
-                          height={20}
-                          className="w-5 h-5 object-cover rounded"
-                          unoptimized
-                        />
-                      )}
-                      <span> is weak against: </span>
-                      <span>{round.feedback.weakAgainst}</span>
-                    </div>
+                    {round.highlightType === "strong" && (
+                      <div className="flex items-center gap-1">
+                        {round.guess[round.highlightedTileIndex] && (
+                          <Image
+                            src={`${CDN_BASE_URL}/${(round.guess[round.highlightedTileIndex]!.affinity_name as string).toLowerCase()}.jpg`}
+                            alt={round.guess[round.highlightedTileIndex]!.affinity_name as string}
+                            width={20}
+                            height={20}
+                            className="w-5 h-5 object-cover rounded"
+                            unoptimized
+                          />
+                        )}
+                        <span> is strong against: </span>
+                        <span>{round.feedback.strongAgainst}</span>
+                      </div>
+                    )}
+                    {round.highlightType === "weak" && (
+                      <div className="flex items-center gap-1">
+                        {round.guess[round.highlightedTileIndex] && (
+                          <Image
+                            src={`${CDN_BASE_URL}/${(round.guess[round.highlightedTileIndex]!.affinity_name as string).toLowerCase()}.jpg`}
+                            alt={round.guess[round.highlightedTileIndex]!.affinity_name as string}
+                            width={20}
+                            height={20}
+                            className="w-5 h-5 object-cover rounded"
+                            unoptimized
+                          />
+                        )}
+                        <span> is weak against: </span>
+                        <span>{round.feedback.weakAgainst}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

@@ -163,6 +163,8 @@ export default function BootsPage() {
   }, []);
   const longPressTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchTargetRef = React.useRef<{ row: number; col: number } | null>(null);
+  /** Set when long-press fired so we ignore the next synthetic click (don't reveal the cell) */
+  const longPressOccurredRef = React.useRef(false);
 
   // Timer
   React.useEffect(() => {
@@ -308,6 +310,10 @@ export default function BootsPage() {
 
   const handleCellLeftClick = (row: number, col: number) => {
     if (!isGameActive || isGameEnding) return;
+    if (longPressOccurredRef.current) {
+      longPressOccurredRef.current = false;
+      return;
+    }
     if (mineMap === null) {
       handleFirstClick(row, col);
       return;
@@ -328,11 +334,13 @@ export default function BootsPage() {
 
   const handleTouchStart = (row: number, col: number) => {
     if (!isGameActive || isGameEnding) return;
+    longPressOccurredRef.current = false;
     touchTargetRef.current = { row, col };
     longPressTimerRef.current = setTimeout(() => {
       longPressTimerRef.current = null;
       const t = touchTargetRef.current;
       if (t && t.row === row && t.col === col && !revealed[row][col]) {
+        longPressOccurredRef.current = true;
         setFlagged((prev) => {
           const next = prev.map((r) => [...r]);
           next[row][col] = !next[row][col];

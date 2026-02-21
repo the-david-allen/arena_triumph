@@ -18,10 +18,7 @@ import {
   addToInventory,
 } from "@/lib/belt-game";
 import { checkUserHasItem, addXpToUser, RARITY_XP } from "@/lib/inventory";
-import {
-  generateBeltPuzzle,
-  type PuzzleDifficulty,
-} from "@/lib/belt-nonogram-generator";
+import { generateBeltPuzzle } from "@/lib/belt-nonogram-generator";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
 import { BACKGROUND_MUSIC_VOLUME } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
@@ -60,9 +57,6 @@ export default function BeltPage() {
   const [showRules, setShowRules] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
   const [dragState, setDragState] = React.useState<"green" | "x" | null>(null);
-  const [showSolution, setShowSolution] = React.useState(false);
-  const [puzzleDifficulty, setPuzzleDifficulty] =
-    React.useState<PuzzleDifficulty | null>(null);
   const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [generationError, setGenerationError] = React.useState<string | null>(
@@ -97,6 +91,12 @@ export default function BeltPage() {
   const timerIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
   const beltMusicRef = React.useRef<HTMLAudioElement | null>(null);
   const gridContainerRef = React.useRef<HTMLDivElement | null>(null);
+  /** Long-press (mobile): timer and target cell */
+  const longPressTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchTargetRef = React.useRef<{ row: number; col: number } | null>(null);
+  /** Set when long-press fired so we ignore the next synthetic click */
+  const longPressOccurredRef = React.useRef(false);
+  const LONG_PRESS_MS = 500;
 
   // Timer effect
   React.useEffect(() => {
@@ -166,7 +166,6 @@ export default function BeltPage() {
         puzzle: newPuzzle,
         rowHints: newRowHints,
         columnHints: newColumnHints,
-        difficulty: newDifficulty,
       } = generateBeltPuzzle();
 
       if (userId) {
@@ -177,7 +176,6 @@ export default function BeltPage() {
       setPuzzle(newPuzzle);
       setRowHints(newRowHints);
       setColumnHints(newColumnHints);
-      setPuzzleDifficulty(newDifficulty);
       setPlayerGrid(
         Array(GRID_SIZE)
           .fill(null)
@@ -191,7 +189,6 @@ export default function BeltPage() {
       setRewardBelt(null);
       setRewardXp(null);
       setFinalSeconds(0);
-      setShowSolution(false);
 
       // Start belt background music (same user gesture as Play Game)
       try {
@@ -320,6 +317,27 @@ export default function BeltPage() {
     // Right-click release is handled in document mouseup (capture); here we only clear drag state
     setIsDragging(false);
     setDragState(null);
+  };
+
+  const handleCellTouchStart = (row: number, col: number) => {
+    if (!isGameActive || isGameEnding) return;
+    touchTargetRef.current = { row, col };
+    longPressTimerRef.current = setTimeout(() => {
+      longPressTimerRef.current = null;
+      const t = touchTargetRef.current;
+      if (t && t.row === row && t.col === col) {
+        longPressOccurredRef.current = true;
+        handleCellClick(row, col, true);
+      }
+    }, LONG_PRESS_MS);
+  };
+
+  const handleCellTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    touchTargetRef.current = null;
   };
 
   // When right button is released anywhere: apply X to cell under cursor (so last cell is set even if mouseEnter never fired), then set refs for suppression
@@ -451,7 +469,7 @@ export default function BeltPage() {
 
   const rulesText = `You have a grid of squares, which must be either filled in dark green or marked with X. Beside each row of the grid are listed the lengths of the runs of dark green squares on that row. Above each column are listed the lengths of the runs of dark green squares in that column. Your aim is to find all dark green squares.
 
-Left click on a square to make it dark green. Right click to mark with X. Click and drag to mark more than one square.  Good luck!`;
+Left click on a square to make it dark green. Long-press or right-click to mark with X. Click and drag to mark more than one square. Good luck!`;
 
   // Show completion screen
   if (showCompletionScreen) {
@@ -528,43 +546,11 @@ Left click on a square to make it dark green. Right click to mark with X. Click 
       {/* Game board */}
       {isGameActive && (
         <div className="space-y-4">
-          {/* Timer and Reveal Button */}
+          {/* Timer */}
           <div className="flex flex-col items-center gap-3">
-            <div className="flex items-center justify-center gap-4">
-              <div className="text-2xl font-bold">
-                Time: {timer} seconds
-              </div>
-              <Button 
-                variant="outline" 
-                onClick={() => setShowSolution(!showSolution)}
-                size="sm"
-              >
-                {showSolution ? "Hide Solution" : "Reveal Solution"}
-              </Button>
+            <div className="text-2xl font-bold">
+              Time: {timer} seconds
             </div>
-            {showSolution && puzzleDifficulty && (
-              <div className="rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 text-sm">
-                <div className="font-semibold text-gray-700 mb-1">
-                  Puzzle difficulty
-                </div>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 text-gray-600">
-                  <span>minRounds:</span>
-                  <span className="font-mono">{puzzleDifficulty.rounds}</span>
-                  <span>minLineUpdates:</span>
-                  <span className="font-mono">
-                    {puzzleDifficulty.lineUpdates}
-                  </span>
-                  <span>maxFirstRoundCellsSet:</span>
-                  <span className="font-mono">
-                    {puzzleDifficulty.firstRoundCellsSet}
-                  </span>
-                  <span>minMaxLineCandidatesSeen:</span>
-                  <span className="font-mono">
-                    {puzzleDifficulty.maxLineCandidatesSeen}
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Nonogram Grid */}
@@ -658,7 +644,6 @@ Left click on a square to make it dark green. Right click to mark with X. Click 
                         .fill(null)
                         .map((_, colIndex) => {
                           const cellState = playerGrid[rowIndex][colIndex];
-                          const solutionValue = puzzle ? puzzle[rowIndex][colIndex] : null;
                           return (
                             <div
                               key={`${rowIndex}-${colIndex}`}
@@ -674,6 +659,10 @@ Left click on a square to make it dark green. Right click to mark with X. Click 
                                 isGameEnding && "pointer-events-none opacity-50"
                               )}
                               onClick={(e) => {
+                                if (longPressOccurredRef.current) {
+                                  longPressOccurredRef.current = false;
+                                  return;
+                                }
                                 // #region agent log
                                 const ign = ignoreNextClickRef.current;
                                 const sameCell = mouseDownCellRef.current?.row === rowIndex && mouseDownCellRef.current?.col === colIndex;
@@ -748,16 +737,11 @@ Left click on a square to make it dark green. Right click to mark with X. Click 
                               }}
                               onMouseDown={(e) => handleCellMouseDown(rowIndex, colIndex, e)}
                               onMouseEnter={() => handleCellMouseEnter(rowIndex, colIndex)}
+                              onTouchStart={() => handleCellTouchStart(rowIndex, colIndex)}
+                              onTouchEnd={handleCellTouchEnd}
+                              onTouchCancel={handleCellTouchEnd}
                             >
-                              {showSolution && solutionValue !== null && (
-                                <span className={cn(
-                                  "text-xs font-bold",
-                                  solutionValue ? "text-green-900" : "text-red-600"
-                                )}>
-                                  {solutionValue ? "T" : "F"}
-                                </span>
-                              )}
-                              {!showSolution && cellState === false && (
+                              {cellState === false && (
                                 <span className="text-gray-700 font-bold text-lg">✕</span>
                               )}
                             </div>
