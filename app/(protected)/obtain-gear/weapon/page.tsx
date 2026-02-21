@@ -1,14 +1,8 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   updatePlayCount,
   getCurrentUserId,
@@ -18,11 +12,15 @@ import {
   addToInventory,
 } from "@/lib/weapon-game";
 import { checkUserHasItem, addXpToUser, RARITY_XP } from "@/lib/inventory";
+
+// Lazy-load Rules dialog so @radix-ui chunk is not required for initial page load (avoids EBUSY on Windows/OneDrive)
+const RulesDialog = dynamic(() => import("./RulesDialog"), { ssr: false });
 import { getTodayPlayCountForGear } from "@/lib/playcount";
 import { playDiceRollSound } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { Check } from "lucide-react";
 
 const COLUMNS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 const CDN_BASE_URL = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/slots";
@@ -300,8 +298,13 @@ export default function WeaponPage() {
           setHighlightedDiceArea("separated");
         }
       } else {
-        // Place button inactive - player must click to select
-        setHighlightedDiceArea(null);
+        // If both sums are equal, no need to select — highlight both; placement will fill two cells in shared column
+        if (diceSum1 === diceSum2 && col1HasUnfilledCell) {
+          setHighlightedDiceArea("both");
+        } else {
+          // Place button inactive - player must click to select
+          setHighlightedDiceArea(null);
+        }
       }
     } else {
       setHighlightedDiceArea(null);
@@ -648,6 +651,21 @@ export default function WeaponPage() {
     return countHighlightedColumns() === 2;
   }, [placeJustClicked, rolledDice, separatedDice, highlightedDiceArea, gridState]);
 
+  const gearCompletion = React.useMemo(() => {
+    const helmCol = COLUMNS.indexOf(REQUIRED_COLUMNS.helm);
+    const chestCol = COLUMNS.indexOf(REQUIRED_COLUMNS.chest);
+    const beltCol = COLUMNS.indexOf(REQUIRED_COLUMNS.belt);
+    return {
+      helm: isColumnTopMarkedOrHighlighted(helmCol),
+      chestpiece: isColumnTopMarkedOrHighlighted(chestCol),
+      belt: isColumnTopMarkedOrHighlighted(beltCol),
+      shoulders: REQUIRED_COLUMNS.shoulders.some((col) => isColumnTopMarkedOrHighlighted(COLUMNS.indexOf(col))),
+      gauntlets: REQUIRED_COLUMNS.gauntlets.some((col) => isColumnTopMarkedOrHighlighted(COLUMNS.indexOf(col))),
+      leggings: REQUIRED_COLUMNS.leggings.some((col) => isColumnTopMarkedOrHighlighted(COLUMNS.indexOf(col))),
+      boots: REQUIRED_COLUMNS.boots.some((col) => isColumnTopMarkedOrHighlighted(COLUMNS.indexOf(col))),
+    };
+  }, [gridState]);
+
   React.useEffect(() => {
     if (showCompletionScreen && (rewardWeapon || rewardXp !== null)) {
       const audio = new Audio("https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/sounds/tada.mp3");
@@ -725,8 +743,8 @@ export default function WeaponPage() {
           {/* Buttons and Dice areas */}
           <div className="bg-white p-4 rounded-lg shadow-lg">
             <div className="flex flex-col md:flex-row gap-4 justify-center items-start">
-              {/* Buttons */}
-              <div className="flex flex-col gap-2 items-center justify-center">
+              {/* Buttons - fixed width so location stays consistent */}
+              <div className="flex flex-col gap-2 items-center justify-center w-[140px] min-w-[140px] shrink-0">
                 <Button
                   onClick={handleRoll}
                   disabled={rollJustClicked || isGameEnding}
@@ -758,17 +776,17 @@ export default function WeaponPage() {
                 </div>
               </div>
 
-              {/* Rolled dice area */}
+              {/* Rolled dice area - fixed width */}
               <div
                 className={cn(
-                  "border-2 rounded-lg p-4 min-w-[200px] min-h-[100px] flex flex-col items-center justify-center cursor-pointer",
+                  "border-2 rounded-lg p-4 w-[280px] min-w-[280px] h-[120px] flex flex-col items-center justify-center cursor-pointer shrink-0",
                   (highlightedDiceArea === "rolled" || highlightedDiceArea === "both") && "bg-green-500 border-green-700",
                   highlightedDiceArea !== "rolled" && highlightedDiceArea !== "both" && "border-gray-400 bg-gray-50"
                 )}
                 onClick={() => handleDiceAreaClick("rolled")}
               >
                 <div className="w-full text-center font-semibold mb-2 opacity-50">Rolled Dice</div>
-                <div className="flex flex-wrap gap-2 justify-center">
+                <div className="flex flex-nowrap gap-1 justify-center items-center">
                   {rolledDice.map((die, index) => (
                     <div
                       key={index}
@@ -797,10 +815,10 @@ export default function WeaponPage() {
                 )}
               </div>
 
-              {/* Separated dice area */}
+              {/* Separated dice area - fixed width */}
               <div
                 className={cn(
-                  "border-2 rounded-lg p-4 min-w-[200px] min-h-[100px] flex flex-col items-center justify-center",
+                  "border-2 rounded-lg p-4 w-[280px] min-w-[280px] h-[120px] flex flex-col items-center justify-center shrink-0",
                   (highlightedDiceArea === "separated" || highlightedDiceArea === "both") && "bg-green-500 border-green-700",
                   highlightedDiceArea !== "separated" && highlightedDiceArea !== "both" && "border-gray-400 bg-gray-50"
                 )}
@@ -809,7 +827,7 @@ export default function WeaponPage() {
                 onClick={() => handleDiceAreaClick("separated")}
               >
                 <div className="w-full text-center font-semibold mb-2 opacity-50">Separated Dice</div>
-                <div className="flex flex-wrap gap-2 justify-center">
+                <div className="flex flex-nowrap gap-1 justify-center items-center">
                   {separatedDice.map((die, index) => (
                     <div
                       key={index}
@@ -836,13 +854,17 @@ export default function WeaponPage() {
             </div>
           </div>
 
-          {/* Grid */}
-          <div className="bg-white p-4 rounded-lg shadow-lg overflow-x-auto">
-            <div className="flex gap-2 justify-center min-w-max">
+          {/* Grid + checklist: grid centered in left half, gear list centered in right half */}
+          <div className="bg-white p-4 rounded-lg shadow-lg flex min-h-[400px] overflow-x-auto">
+            <div className="w-1/2 flex justify-center items-center min-w-0">
+              <div className="flex gap-2 justify-center min-w-max">
               {COLUMNS.map((columnValue, colIndex) => {
                 const maxHeight = Math.max(...COLUMNS.map(col => COLUMN_HEIGHTS[col]));
                 const columnHeight = COLUMN_HEIGHTS[columnValue];
                 const spacerHeight = maxHeight - columnHeight;
+                const layoutOffset =
+                  columnValue === 2 || columnValue === 12 ? -1 : columnValue === 7 ? 1 : 0;
+                const visualSpacerHeight = Math.max(0, spacerHeight + layoutOffset);
                 return (
                   <div key={columnValue} className="flex flex-col items-center relative">
                     {/* Column label - positioned just above top cell */}
@@ -853,16 +875,16 @@ export default function WeaponPage() {
                           ? "text-green-600" 
                           : "text-black"
                       )}
-                      style={{ top: `${spacerHeight * 42 - 24}px` }}
+                      style={{ top: `${visualSpacerHeight * 42 - 24}px` }}
                     >
                       {columnValue}
                     </div>
                     
                     {/* Grid cells container - cells aligned at bottom */}
-                    <div className="flex flex-col gap-1 relative" style={{ height: `${maxHeight * 42}px` }}>
+                    <div className="flex flex-col gap-1 relative" style={{ height: `${(maxHeight + layoutOffset) * 42}px` }}>
                       {/* Spacer to push cells to bottom */}
-                      {spacerHeight > 0 && (
-                        <div style={{ height: `${spacerHeight * 42}px` }} />
+                      {visualSpacerHeight > 0 && (
+                        <div style={{ height: `${visualSpacerHeight * 42}px` }} />
                       )}
                       
                       {/* Cells rendered top to bottom (normal order: index 0 at top, last index at bottom) */}
@@ -902,24 +924,41 @@ export default function WeaponPage() {
                   </div>
                 );
               })}
+              </div>
+            </div>
+
+            {/* Gear completion checklist - right half, centered */}
+            <div className="w-1/2 flex justify-center items-center min-w-0">
+              <div className="flex flex-col gap-1.5 shrink-0 border border-gray-300 rounded-lg p-3 bg-gray-50">
+              {[
+                { key: "helm", label: "Helm", done: gearCompletion.helm },
+                { key: "chestpiece", label: "Chestpiece", done: gearCompletion.chestpiece },
+                { key: "belt", label: "Belt", done: gearCompletion.belt },
+                { key: "shoulders", label: "Shoulders", done: gearCompletion.shoulders },
+                { key: "gauntlets", label: "Gauntlets", done: gearCompletion.gauntlets },
+                { key: "leggings", label: "Leggings", done: gearCompletion.leggings },
+                { key: "boots", label: "Boots", done: gearCompletion.boots },
+              ].map(({ key, label, done }) => (
+                <div key={key} className="flex items-center gap-2">
+                  <div
+                    className={cn(
+                      "w-6 h-6 border-2 flex items-center justify-center shrink-0 rounded",
+                      done ? "bg-green-600 border-green-700 text-white" : "border-gray-400 bg-white"
+                    )}
+                  >
+                    {done && <Check className="w-4 h-4" strokeWidth={3} />}
+                  </div>
+                  <span className="text-sm font-medium text-gray-800">{label}</span>
+                </div>
+              ))}
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Rules Dialog */}
-      <Dialog open={showRules} onOpenChange={setShowRules}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Game Rules</DialogTitle>
-            <DialogDescription className="whitespace-pre-line">
-              {`Roll 4 dice at a time and separate them into 2 sets of 2.  Place these sets to fill out the grid.  You can only place in up to 3 distinct columns each turn though, so be careful or you might roll dice that you cannot place and lose your progress for the turn.  End your turn at any point to lock in the progress you've made so far this turn.
-
-The game ends when you have completed the Helm, Chestpiece, and Belt columns and at least one Boots, Legs, Gauntlets, and Shoulders. Good luck!`}
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
+      {/* Rules Dialog - lazy-loaded to avoid loading @radix-ui chunk on initial page request */}
+      <RulesDialog open={showRules} onOpenChange={setShowRules} />
     </div>
   );
 }
