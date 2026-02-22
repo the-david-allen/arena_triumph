@@ -98,15 +98,13 @@ export default function ChestpiecePage() {
     };
   }, []);
 
-  // Chest game background music: play when game is active, stop when game ends or unmount
+  // Stop chest background music when game ends or component unmounts (music is started in handlePlayGame to satisfy autoplay policy)
   React.useEffect(() => {
-    if (isGameActive && !showCompletionScreen) {
-      playChestBackgroundMusic();
-      return () => stopChestBackgroundMusic();
-    }
-    if (showCompletionScreen) {
+    if (!(isGameActive && !showCompletionScreen)) {
       stopChestBackgroundMusic();
+      return;
     }
+    return () => stopChestBackgroundMusic();
   }, [isGameActive, showCompletionScreen]);
 
   // #region agent log
@@ -126,6 +124,8 @@ export default function ChestpiecePage() {
   };
 
   const handlePlayGame = async () => {
+    // Start music synchronously in the click handler so the browser allows it (autoplay policy)
+    playChestBackgroundMusic();
     const userId = await getCurrentUserId();
     if (userId) {
       await updatePlayCount(userId);
@@ -203,9 +203,7 @@ export default function ChestpiecePage() {
     try {
       const userId = await getCurrentUserId();
       if (userId) {
-        // Update play count (existing)
-        await updatePlayCount(userId);
-        
+        // Play count is incremented at game start only; do not increment again here.
         // Update top scores (existing)
         await updateTopScores(userId, finalScore);
         

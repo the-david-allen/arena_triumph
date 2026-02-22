@@ -410,9 +410,7 @@ export default function BeltPage() {
     try {
       const userId = await getCurrentUserId();
       if (userId) {
-        // Update play count
-        await updatePlayCount(userId);
-
+        // Play count is incremented at game start only; do not increment again here.
         // Update top scores
         await updateTopScores(userId, timer);
 

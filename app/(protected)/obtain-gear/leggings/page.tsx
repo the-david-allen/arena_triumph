@@ -42,9 +42,6 @@ interface RoundData {
 }
 
 export default function LeggingsPage() {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'leggings/page.tsx:41',message:'LeggingsPage render',data:{hasRouter:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
   const router = useRouter();
   const [isGameActive, setIsGameActive] = React.useState(false);
   const [answer, setAnswer] = React.useState<Affinity[]>([]);
@@ -269,9 +266,7 @@ export default function LeggingsPage() {
     try {
       const userId = await getCurrentUserId();
       if (userId) {
-        // Update play count
-        await updatePlayCount(userId);
-
+        // Update play count (incremented at game start only; do not increment again here)
         // Update top scores (rounds is the score, lower is better)
         await updateTopScores(userId, roundCount);
 
@@ -367,9 +362,6 @@ Try to guess in as few rounds as possible.  Good luck!`;
     );
   }
 
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'leggings/page.tsx:pre-main-return',message:'About to return main UI',data:{showCompletionScreen,todayPlayCount},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'verify'})}).catch(()=>{});
-  // #endregion
   return (
     <div className="space-y-6 p-6 min-h-screen bg-gray-200">
       {/* Header with buttons */}

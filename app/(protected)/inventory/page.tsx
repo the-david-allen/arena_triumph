@@ -369,6 +369,10 @@ export default function InventoryPage() {
             </div>
           </div>
 
+          <p className="text-sm text-muted-foreground">
+            Discarding an item will gain you experience.
+          </p>
+
           {/* Bottom: Inventory grid */}
           <div className="rounded-lg border p-4 shadow-sm bg-[rgb(120,75,0)]">
             <p
