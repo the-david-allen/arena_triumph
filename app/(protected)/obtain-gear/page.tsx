@@ -8,8 +8,6 @@ import { createClient } from "@/lib/supabase/client";
 import { getTodayPlayCountsByUser } from "@/lib/playcount";
 import { cn } from "@/lib/utils";
 
-export const runtime = "edge";
-
 const CDN_BASE_URL = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/slots";
 
 const gearTypes = [

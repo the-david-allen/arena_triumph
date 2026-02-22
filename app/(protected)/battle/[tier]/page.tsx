@@ -39,8 +39,6 @@ type FightPhase =
   | "player_wins"
   | "boss_wins";
 
-export const runtime = "edge";
-
 export default function BattleTierPage() {
   const params = useParams();
   const router = useRouter();

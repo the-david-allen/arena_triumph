@@ -1,7 +1,6 @@
 "use client";
 
-export const runtime = "edge";
-
+import Image from "next/image";
 import { useCallback, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -118,6 +117,182 @@ export default function ScoutPage() {
             Within the allotted time, determine which Weapon, Affinity,
             Number, and Armor belongs in each spot.
           </p>
+          <table className="w-full max-w-2xl border-collapse rounded-lg border border-border">
+            <caption className="border-b border-border bg-muted/50 px-4 py-2 text-left text-lg font-semibold text-foreground">
+              Rules
+            </caption>
+            <tbody>
+              <tr>
+                <td className="border-r border-border p-4 align-top">
+                  <figure className="flex flex-col items-center gap-2">
+                    <Image
+                      src="https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/bling/scout_example.png"
+                      alt="Example of a grid cell showing dice value possibilities"
+                      width={200}
+                      height={133}
+                      className="rounded-lg border border-border object-contain"
+                      unoptimized
+                    />
+                    <figcaption className="max-w-sm text-center text-sm text-muted-foreground">
+                      Each square will contain one of the 4 possibilities shown, in this example one of the 4 dice
+                      value possibilities. The player would right-click a die
+                      face to eliminate that possibility and left-click a die
+                      face if they know that is the correct one.
+                    </figcaption>
+                  </figure>
+                </td>
+                <td className="p-4 align-top">
+                  <div className="flex flex-col gap-3 text-sm text-muted-foreground">
+                    <div className="grid grid-cols-2 gap-4 items-start">
+                      <div className="flex flex-col gap-2">
+                        <p className="font-medium text-foreground">Before clue</p>
+                        <div className="flex items-center gap-1.5">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-border bg-card p-0.5 sm:h-12 sm:w-12">
+                          <Image
+                            src="https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/slots/belt.jpg"
+                            alt="Belt"
+                            width={40}
+                            height={40}
+                            className="h-full w-full object-contain"
+                            unoptimized
+                          />
+                        </div>
+                        <span className="text-lg text-muted-foreground">
+                          &rarr;
+                        </span>
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-border bg-card p-0.5 sm:h-12 sm:w-12">
+                          <Image
+                            src="https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/bling/dice/five.png"
+                            alt="5 dice"
+                            width={40}
+                            height={40}
+                            className="h-full w-full object-contain"
+                            unoptimized
+                          />
+                        </div>
+                      </div>
+                      <p className="text-sm">
+                        In this example, the Belt armor would be in a column to
+                        the left of the 5 dice.
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <p className="font-medium text-foreground">
+                        Horizontal clue
+                      </p>
+                      <div className="flex flex-col items-start gap-0">
+                        <span className="text-xs text-muted-foreground">
+                          &rarr;
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-border bg-card p-0.5 sm:h-12 sm:w-12">
+                            <Image
+                              src="https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/bling/dice/five.png"
+                              alt="5 dice"
+                              width={40}
+                              height={40}
+                              className="h-full w-full object-contain"
+                              unoptimized
+                            />
+                          </div>
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-border bg-card p-0.5 sm:h-12 sm:w-12">
+                            <Image
+                              src="https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/slots/shoulders.jpg"
+                              alt="Shoulders"
+                              width={40}
+                              height={40}
+                              className="h-full w-full object-contain"
+                              unoptimized
+                            />
+                          </div>
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-border bg-card p-0.5 sm:h-12 sm:w-12">
+                            <Image
+                              src="https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/affinities/rock.jpg"
+                              alt="Rock affinity"
+                              width={40}
+                              height={40}
+                              className="h-full w-full object-contain"
+                              unoptimized
+                            />
+                          </div>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          &larr;
+                        </span>
+                      </div>
+                      <p className="text-sm">
+                        In this example, the 5 and the Rock affinity are two
+                        columns away with the Shoulders being in the column in
+                        between.
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <p className="font-medium text-foreground">Adjacent clue</p>
+                      <div className="flex items-center gap-1.5">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-border bg-card p-0.5 sm:h-12 sm:w-12">
+                          <Image
+                            src="https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/bling/dice/six.png"
+                            alt="6 dice"
+                            width={40}
+                            height={40}
+                            className="h-full w-full object-contain"
+                            unoptimized
+                          />
+                        </div>
+                        <span className="text-lg text-muted-foreground">
+                          &harr;
+                        </span>
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-border bg-card p-0.5 sm:h-12 sm:w-12">
+                          <Image
+                            src="https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/affinities/lightning.jpg"
+                            alt="Lightning affinity"
+                            width={40}
+                            height={40}
+                            className="h-full w-full object-contain"
+                            unoptimized
+                          />
+                        </div>
+                      </div>
+                      <p className="text-sm">
+                        In this example, the 6 and the Lightning would be in
+                        adjacent columns (either order).
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <p className="font-medium text-foreground">Above clue</p>
+                      <div className="flex flex-col items-start gap-1">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-border bg-card p-0.5 sm:h-12 sm:w-12">
+                          <Image
+                            src="https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/bling/dice/six.png"
+                            alt="6 dice"
+                            width={40}
+                            height={40}
+                            className="h-full w-full object-contain"
+                            unoptimized
+                          />
+                        </div>
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-border bg-card p-0.5 sm:h-12 sm:w-12">
+                          <Image
+                            src="https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/affinities/phantom.jpg"
+                            alt="Phantom affinity"
+                            width={40}
+                            height={40}
+                            className="h-full w-full object-contain"
+                            unoptimized
+                          />
+                        </div>
+                      </div>
+                      <p className="text-sm">
+                        In this example, the 6 and Phantom affinity would be in
+                        the same vertical column.
+                      </p>
+                    </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       )}
 

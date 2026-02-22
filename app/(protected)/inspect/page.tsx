@@ -19,8 +19,6 @@ import {
   type LevelProgress,
 } from "@/lib/inspect";
 
-export const runtime = "edge";
-
 interface EquipmentSlotProps {
   item: InventoryItem | null;
   slotName: string;
