@@ -180,45 +180,47 @@ export default function ScoutPage() {
                       <p className="font-medium text-foreground">
                         Horizontal clue
                       </p>
-                      <div className="flex flex-col items-start gap-0">
+                      <div className="grid grid-cols-[1fr_auto_1fr] items-center justify-items-center gap-x-1 gap-y-0">
+                        <span />
                         <span className="text-xs text-muted-foreground">
                           &rarr;
                         </span>
-                        <div className="flex items-center gap-1">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-border bg-card p-0.5 sm:h-12 sm:w-12">
-                            <Image
-                              src="https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/bling/dice/five.png"
-                              alt="5 dice"
-                              width={40}
-                              height={40}
-                              className="h-full w-full object-contain"
-                              unoptimized
-                            />
-                          </div>
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-border bg-card p-0.5 sm:h-12 sm:w-12">
-                            <Image
-                              src="https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/slots/shoulders.jpg"
-                              alt="Shoulders"
-                              width={40}
-                              height={40}
-                              className="h-full w-full object-contain"
-                              unoptimized
-                            />
-                          </div>
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-border bg-card p-0.5 sm:h-12 sm:w-12">
-                            <Image
-                              src="https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/affinities/rock.jpg"
-                              alt="Rock affinity"
-                              width={40}
-                              height={40}
-                              className="h-full w-full object-contain"
-                              unoptimized
-                            />
-                          </div>
+                        <span />
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-border bg-card p-0.5 sm:h-12 sm:w-12">
+                          <Image
+                            src="https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/bling/dice/five.png"
+                            alt="5 dice"
+                            width={40}
+                            height={40}
+                            className="h-full w-full object-contain"
+                            unoptimized
+                          />
                         </div>
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-border bg-card p-0.5 sm:h-12 sm:w-12">
+                          <Image
+                            src="https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/slots/shoulders.jpg"
+                            alt="Shoulders"
+                            width={40}
+                            height={40}
+                            className="h-full w-full object-contain"
+                            unoptimized
+                          />
+                        </div>
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-border bg-card p-0.5 sm:h-12 sm:w-12">
+                          <Image
+                            src="https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/affinities/rock.jpg"
+                            alt="Rock affinity"
+                            width={40}
+                            height={40}
+                            className="h-full w-full object-contain"
+                            unoptimized
+                          />
+                        </div>
+                        <span />
                         <span className="text-xs text-muted-foreground">
                           &larr;
                         </span>
+                        <span />
                       </div>
                       <p className="text-sm">
                         In this example, the 5 and the Rock affinity are two

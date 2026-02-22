@@ -448,31 +448,25 @@ export default function WeaponPage() {
 
   // Handle End Turn button
   const handleEndTurn = () => {
-    // Check if any cells are highlighted (meaning dice were placed this turn)
-    const hasHighlightedCells = gridState.some((column) =>
-      column.some((cell) => cell === "highlighted")
-    );
-
-    if (!hasHighlightedCells && rollJustClicked) {
-      // Player pressed Roll but didn't Place any dice - remove highlights and end turn
+    // If player did not click Place this turn, clear any green cells to empty and end turn
+    if (!placeJustClicked) {
       setGridState((prev) =>
         prev.map((column) =>
           column.map((cell) => (cell === "highlighted" ? null : cell === "lost" ? null : cell))
         )
       );
-      
-      // Increment turns and reset for next turn
+
       setTurnsTaken((prev) => prev + 1);
       setRolledDice([]);
       setSeparatedDice([]);
       setHighlightedDiceArea(null);
       setNoPlacementMessage("");
       setPlaceJustClicked(false);
-      setRollJustClicked(false); // Enable Roll button
+      setRollJustClicked(false);
       return;
     }
 
-    // Convert green highlights to dark green marks (normal end turn with placements)
+    // Player placed this turn: convert green highlights to marked (commit placements)
     setGridState((prev) =>
       prev.map((column) =>
         column.map((cell) => (cell === "highlighted" ? "marked" : cell === "lost" ? null : cell))
