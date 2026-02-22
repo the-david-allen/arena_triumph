@@ -234,6 +234,8 @@ export default function InspectPage() {
             </h1>
             <p className="text-lg text-muted-foreground">
               Level: {userProfile?.level ?? 1}
+              {" · "}
+              Health: {9 + (userProfile?.level ?? 1)}
             </p>
             {levelProgress != null && (
               <div className="mx-auto mt-2 max-w-xs">

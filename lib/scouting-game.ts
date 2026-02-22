@@ -303,6 +303,30 @@ function clueHeight(clue: Clue): number {
   }
 }
 
+/** Reorder clues so same-height clues sit in the same row in a 2-column grid. */
+function orderCluesForTwoColumnGrid(clues: Clue[]): Clue[] {
+  if (clues.length === 0) return [];
+  const byHeight = new Map<number, Clue[]>();
+  for (const c of clues) {
+    const h = clueHeight(c);
+    if (!byHeight.has(h)) byHeight.set(h, []);
+    byHeight.get(h)!.push(c);
+  }
+  const ordered: Clue[] = [];
+  const orphans: Clue[] = [];
+  for (const h of [1, 2, 3]) {
+    const group = byHeight.get(h) ?? [];
+    for (let i = 0; i + 1 < group.length; i += 2) {
+      ordered.push(group[i], group[i + 1]);
+    }
+    if (group.length % 2 === 1) {
+      orphans.push(group[group.length - 1]);
+    }
+  }
+  ordered.push(...orphans);
+  return ordered;
+}
+
 function clueKey(clue: Clue): string {
   const refKey = (r: ItemRef) => `${r.row}-${r.item}`;
   if ("c" in clue) return `${clue.type}:${refKey(clue.a)},${refKey(clue.b)},${refKey(clue.c)}`;
@@ -356,8 +380,9 @@ export function generateScoutingPuzzle(): ScoutingPuzzle {
     selected.push(clue);
   }
 
-  // Sort by visual height so same-height clues pair in 2-column grid
+  // Sort by visual height, then reorder so same-height clues share a row in the 2-col grid
   selected.sort((a, b) => clueHeight(a) - clueHeight(b));
+  const cluesForGrid = orderCluesForTwoColumnGrid(selected);
 
-  return { solution, clues: selected };
+  return { solution, clues: cluesForGrid };
 }

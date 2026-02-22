@@ -42,8 +42,19 @@ export default function InventoryPage() {
     item: InventoryItem;
     xpVal: number;
   } | null>(null);
+  const [showRarityLookup, setShowRarityLookup] = React.useState(false);
 
   const userIdRef = React.useRef<string | null>(null);
+
+  const RARITY_DISPLAY: { name: string; color: string }[] = [
+    { name: "Mythic", color: "rgb(230, 0, 38)" },
+    { name: "Legendary", color: "rgb(255, 155, 1)" },
+    { name: "Epic", color: "rgb(167, 139, 253)" },
+    { name: "Rare", color: "rgb(62, 100, 225)" },
+    { name: "Uncommon", color: "rgb(70, 180, 90)" },
+    { name: "Common", color: "rgb(255, 255, 255)" },
+    { name: "Base", color: "rgb(211, 211, 211)" },
+  ];
 
   React.useEffect(() => {
     if (!showLevelUp) return;
@@ -238,7 +249,15 @@ export default function InventoryPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Manage Inventory</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-foreground">Manage Inventory</h1>
+          <Button
+            variant="outline"
+            onClick={() => setShowRarityLookup(true)}
+          >
+            Rarity Lookup
+          </Button>
+        </div>
         <p className="mt-2 text-muted-foreground">
           View, equip, and remove items from your inventory.
         </p>
@@ -377,7 +396,7 @@ export default function InventoryPage() {
           <div className="rounded-lg border p-4 shadow-sm bg-[rgb(120,75,0)]">
             <p
               className={cn(
-                "mb-3 font-medium",
+                "mb-3 font-medium text-white",
                 isInventoryLabelWarning && "font-bold text-destructive"
               )}
             >
@@ -448,6 +467,22 @@ export default function InventoryPage() {
           </div>
         </div>
       </div>
+
+      {/* Rarity Lookup dialog */}
+      <Dialog open={showRarityLookup} onOpenChange={setShowRarityLookup}>
+        <DialogContent className="bg-black border-black">
+          <DialogHeader>
+            <DialogTitle className="text-white">Rarity Lookup</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1 py-2">
+            {RARITY_DISPLAY.map(({ name, color }) => (
+              <div key={name} style={{ color }}>
+                {name}
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Discard confirmation dialog */}
       <Dialog
