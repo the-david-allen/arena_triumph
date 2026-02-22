@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   validateUsername,
+  checkUsernameAgainstProfanity,
   checkUsernameAvailability,
   updateUserProfile,
 } from "@/lib/username";
@@ -40,6 +41,16 @@ export function PreLandingPage({ userId, onProfileComplete }: PreLandingPageProp
     const validation = validateUsername(username);
     if (!validation.isValid) {
       setValidationMessage(validation.message);
+      setIsChecking(false);
+      return;
+    }
+
+    // Then check against profanity_lookup
+    const profanityResult = await checkUsernameAgainstProfanity(username);
+    if (!profanityResult.allowed) {
+      setValidationMessage(
+        profanityResult.error ?? "Username not allowed."
+      );
       setIsChecking(false);
       return;
     }

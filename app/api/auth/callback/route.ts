@@ -8,9 +8,8 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get("code");
   const origin = requestUrl.origin;
 
-  let supabaseResponse = NextResponse.next({
-    request,
-  });
+  // Accumulate cookies here; NextResponse.next() is not allowed in route handlers.
+  const cookiesToSetStore: Array<{ name: string; value: string; options: CookieOptions }> = [];
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,26 +20,20 @@ export async function GET(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }>) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            request.cookies.set({ name, value, ...options })
-          );
-          supabaseResponse = NextResponse.next({
-            request,
-          });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set({ name, value, ...options })
-          );
+          cookiesToSet.forEach((c) => cookiesToSetStore.push(c));
         },
       },
     }
   );
 
   if (code) {
-    await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) throw error;
   }
 
-  // URL to redirect to after sign in process completes
-  return NextResponse.redirect(`${origin}/`, {
-    headers: supabaseResponse.headers,
-  });
+  const res = NextResponse.redirect(`${origin}/`);
+  cookiesToSetStore.forEach(({ name, value, options }) =>
+    res.cookies.set(name, value, options)
+  );
+  return res;
 }

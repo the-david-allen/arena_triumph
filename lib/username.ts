@@ -69,6 +69,47 @@ export function validateUsername(username: string): UsernameValidationResult {
 }
 
 /**
+ * Checks if username contains any word from profanity_lookup table.
+ * Returns { allowed: false } if it contains a listed word or on error.
+ */
+export async function checkUsernameAgainstProfanity(
+  username: string
+): Promise<{ allowed: boolean; error?: string }> {
+  try {
+    const supabase = createClient();
+
+    const { data, error } = await supabase
+      .from("profanity_lookup")
+      .select("word");
+
+    if (error) {
+      console.error("Error fetching profanity lookup:", error);
+      return {
+        allowed: false,
+        error: "Error checking username availability",
+      };
+    }
+
+    const lowerUsername = username.toLowerCase();
+    const words = (data ?? []) as { word: string }[];
+    for (const row of words) {
+      const wordLower = (row.word ?? "").toLowerCase();
+      if (wordLower && lowerUsername.includes(wordLower)) {
+        return { allowed: false };
+      }
+    }
+
+    return { allowed: true };
+  } catch (err) {
+    console.error("Error checking username against profanity:", err);
+    return {
+      allowed: false,
+      error: "Error checking username availability",
+    };
+  }
+}
+
+/**
  * Checks if username is available in the database
  */
 export async function checkUsernameAvailability(
