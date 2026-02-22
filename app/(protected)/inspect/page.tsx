@@ -73,38 +73,39 @@ function EquipmentSlot({
       <p className="text-muted-foreground">
         Power: {item?.details?.strength ?? "—"}
       </p>
-      <div
-        className={cn(
-          "flex flex-wrap items-center gap-1",
-          textAlign === "right" && "justify-end"
-        )}
-      >
-        <span className="text-muted-foreground">Affinities:</span>
-        {item?.details?.primary_affinity ? (
-          <Image
-            src={getAffinityIconUrl(item.details.primary_affinity)}
-            alt={item.details.primary_affinity}
-            width={14}
-            height={14}
-            className="rounded object-contain"
-            unoptimized
-          />
-        ) : (
-          <span className="h-3.5 w-3.5 rounded border bg-muted/30" />
-        )}
-        {item?.details?.secondary_affinity ? (
-          <Image
-            src={getAffinityIconUrl(item.details.secondary_affinity)}
-            alt={item.details.secondary_affinity}
-            width={14}
-            height={14}
-            className="rounded object-contain"
-            unoptimized
-          />
-        ) : (
-          <span className="h-3.5 w-3.5 rounded border bg-muted/30" />
-        )}
-      </div>
+      {(item?.details?.primary_affinity ||
+        item?.details?.secondary_affinity) && (
+        <div
+          className={cn(
+            "flex flex-wrap items-center gap-1",
+            textAlign === "right" && "justify-end"
+          )}
+        >
+          <span className="text-muted-foreground">Affinities:</span>
+          {item?.details?.primary_affinity && (
+            <Image
+              src={getAffinityIconUrl(item.details.primary_affinity)}
+              alt={item.details.primary_affinity}
+              title={item.details.primary_affinity}
+              width={14}
+              height={14}
+              className="rounded object-contain"
+              unoptimized
+            />
+          )}
+          {item?.details?.secondary_affinity && (
+            <Image
+              src={getAffinityIconUrl(item.details.secondary_affinity)}
+              alt={item.details.secondary_affinity}
+              title={item.details.secondary_affinity}
+              width={14}
+              height={14}
+              className="rounded object-contain"
+              unoptimized
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 

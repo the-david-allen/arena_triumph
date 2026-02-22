@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { getAffinityIconUrl } from "@/lib/inventory";
 import { cn } from "@/lib/utils";
 
 const TIER_BORDER_COLORS: Record<number, string> = {
@@ -35,6 +36,8 @@ interface TierStatus {
   scouting_success: boolean;
   boss_name?: string;
   boss_image_url?: string;
+  boss_attack_affinity_name?: string;
+  boss_defense_affinity_name?: string;
 }
 
 export default function BattleSelectPage() {
@@ -92,13 +95,35 @@ export default function BattleSelectPage() {
             if (lineup) {
               const { data: boss } = await supabase
                 .from("bosses_lookup")
-                .select("name, image_url")
+                .select("name, image_url, attack_affinity, defense_affinity")
                 .eq("id", lineup.boss_id)
                 .single();
 
               if (boss) {
                 next[row.tier].boss_name = boss.name;
                 next[row.tier].boss_image_url = boss.image_url ?? undefined;
+                const attackName =
+                  boss.attack_affinity != null
+                    ? (
+                        await supabase
+                          .from("affinity_lookup")
+                          .select("affinity_name")
+                          .eq("id", boss.attack_affinity)
+                          .single()
+                      ).data?.affinity_name ?? undefined
+                    : undefined;
+                const defenseName =
+                  boss.defense_affinity != null
+                    ? (
+                        await supabase
+                          .from("affinity_lookup")
+                          .select("affinity_name")
+                          .eq("id", boss.defense_affinity)
+                          .single()
+                      ).data?.affinity_name ?? undefined
+                    : undefined;
+                next[row.tier].boss_attack_affinity_name = attackName;
+                next[row.tier].boss_defense_affinity_name = defenseName;
               }
             }
           }
@@ -269,9 +294,37 @@ function TierCard({ tier, status, onTierClick, onScoutClick }: TierCardProps) {
               <span className="absolute inset-0 bg-gradient-to-b from-gray-800 to-gray-950" />
             )}
             <span className="absolute inset-0 bg-black/35" aria-hidden />
-            <span className="relative z-10 text-center text-sm font-semibold text-white drop-shadow-md">
+            <span className="absolute left-0 right-0 top-0 z-10 truncate px-1 py-0.5 text-center text-base font-semibold text-white drop-shadow-md">
               {status.boss_name ?? `Tier ${tier} Boss`}
             </span>
+            <div className="absolute bottom-0 left-0 right-0 z-10 flex flex-col items-center justify-center gap-0.5 px-1 py-1 text-white">
+              <span className="flex items-center gap-1.5 text-sm">
+                Attack:{" "}
+                {status.boss_attack_affinity_name ? (
+                  <img
+                    src={getAffinityIconUrl(status.boss_attack_affinity_name)}
+                    alt={status.boss_attack_affinity_name}
+                    title={status.boss_attack_affinity_name}
+                    className="h-5 w-5 rounded object-contain"
+                  />
+                ) : (
+                  "—"
+                )}
+              </span>
+              <span className="flex items-center gap-1.5 text-sm">
+                Defense:{" "}
+                {status.boss_defense_affinity_name ? (
+                  <img
+                    src={getAffinityIconUrl(status.boss_defense_affinity_name)}
+                    alt={status.boss_defense_affinity_name}
+                    title={status.boss_defense_affinity_name}
+                    className="h-5 w-5 rounded object-contain"
+                  />
+                ) : (
+                  "—"
+                )}
+              </span>
+            </div>
           </>
         ) : (
           <>

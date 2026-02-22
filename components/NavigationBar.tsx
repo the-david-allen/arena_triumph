@@ -1,11 +1,26 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const navigationItems = [
   { name: "Battle", href: "/battle" },
@@ -14,16 +29,51 @@ const navigationItems = [
   { name: "Inspect", href: "/inspect" },
 ];
 
+const CONFIRM_TEXT = "DELETE";
+
 export function NavigationBar() {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [confirmInput, setConfirmInput] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
   }
+
+  function openDeleteDialog() {
+    setDeleteDialogOpen(true);
+    setConfirmInput("");
+    setDeleteError(null);
+  }
+
+  function closeDeleteDialog() {
+    setDeleteDialogOpen(false);
+    setConfirmInput("");
+    setDeleteError(null);
+  }
+
+  async function handleDeleteAccount() {
+    setDeleteError(null);
+    setIsDeleting(true);
+    const { error } = await supabase.rpc("delete_my_account");
+    setIsDeleting(false);
+    if (error) {
+      setDeleteError(error.message ?? "Could not delete account. Try again.");
+      return;
+    }
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
+
+  const canConfirmDelete =
+    confirmInput.trim() === CONFIRM_TEXT && !isDeleting;
 
   return (
     <nav className="border-b shadow-sm bg-[var(--nav-bar-bg)]">
@@ -61,17 +111,76 @@ export function NavigationBar() {
                 );
               })}
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleSignOut}
-              className="ml-2 text-base sm:text-lg font-bold text-white whitespace-nowrap transition-all duration-200 hover:bg-accent hover:text-accent-foreground"
-            >
-              Sign Out
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-2 text-base sm:text-lg font-bold text-white whitespace-nowrap transition-all duration-200 hover:bg-accent hover:text-accent-foreground"
+                >
+                  Account
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[10rem]">
+                <DropdownMenuItem onClick={handleSignOut}>
+                  Sign Out
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={openDeleteDialog}
+                >
+                  Delete User Account
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={(open) => !open && closeDeleteDialog()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete account</DialogTitle>
+            <DialogDescription>
+              Your account and all associated data will be permanently deleted.
+              This cannot be undone. To confirm, type <strong>{CONFIRM_TEXT}</strong> in the
+              box below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2">
+            <input
+              type="text"
+              value={confirmInput}
+              onChange={(e) => setConfirmInput(e.target.value)}
+              placeholder={CONFIRM_TEXT}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              aria-label={`Type ${CONFIRM_TEXT} to confirm`}
+              disabled={isDeleting}
+            />
+            {deleteError && (
+              <p className="text-sm text-danger" role="alert">
+                {deleteError}
+              </p>
+            )}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={closeDeleteDialog}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteAccount}
+              disabled={!canConfirmDelete}
+            >
+              {isDeleting ? "Deleting…" : "Confirm"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </nav>
   );
 }

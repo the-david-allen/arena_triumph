@@ -52,7 +52,7 @@ export default function ObtainGearPage() {
       <div>
         <h1 className="text-3xl font-bold text-foreground">Obtain Gear</h1>
         <p className="mt-2 text-muted-foreground">
-          Select a gear type to view available equipment.
+          Select a gear slot to play for a new piece of gear.
         </p>
       </div>
 

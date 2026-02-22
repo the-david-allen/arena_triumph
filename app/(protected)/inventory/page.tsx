@@ -14,7 +14,6 @@ import {
 import { cn } from "@/lib/utils";
 import {
   GEAR_SLOTS,
-  getSlotIconUrl,
   getAffinityIconUrl,
   RARITY_XP,
   getCurrentUserId,
@@ -26,7 +25,7 @@ import {
 } from "@/lib/inventory";
 
 export default function InventoryPage() {
-  const [selectedSlot, setSelectedSlot] = React.useState<string | null>(null);
+  const [selectedSlot, setSelectedSlot] = React.useState<string>("Weapon");
   const [selectedInventoryItem, setSelectedInventoryItem] =
     React.useState<InventoryItem | null>(null);
   const [equippedBySlot, setEquippedBySlot] = React.useState<
@@ -82,6 +81,11 @@ export default function InventoryPage() {
         if (userId) {
           const equipped = await fetchEquippedItems(userId);
           if (!cancelled) setEquippedBySlot(equipped);
+          if (!cancelled) {
+            const items = await fetchInventoryBySlot(userId, "Weapon");
+            setInventoryItems(items);
+            setSelectedInventoryItem(equipped["Weapon"] ?? null);
+          }
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -132,7 +136,7 @@ export default function InventoryPage() {
       await equipItem(userId, itemToEquip.gear_id, gearType);
       const [, items] = await Promise.all([
         loadEquippedItems(),
-        selectedSlot ? loadInventoryForSlot(selectedSlot) : Promise.resolve([] as InventoryItem[]),
+        loadInventoryForSlot(selectedSlot),
       ]);
       if (selectedSlot && items) {
         const updated = items.find((i) => i.gear_id === itemToEquip.gear_id);
@@ -142,7 +146,7 @@ export default function InventoryPage() {
       console.error("Failed to equip:", err);
       await Promise.all([
         loadEquippedItems(),
-        selectedSlot ? loadInventoryForSlot(selectedSlot) : Promise.resolve(),
+        loadInventoryForSlot(selectedSlot),
       ]);
     } finally {
       setIsActionLoading(false);
@@ -187,24 +191,41 @@ export default function InventoryPage() {
       if (result.leveledUp) setShowLevelUp(true);
       await Promise.all([
         loadEquippedItems(),
-        selectedSlot ? loadInventoryForSlot(selectedSlot) : Promise.resolve(),
+        loadInventoryForSlot(selectedSlot),
       ]);
     } catch (err) {
       console.error("Failed to discard:", err);
       await Promise.all([
         loadEquippedItems(),
-        selectedSlot ? loadInventoryForSlot(selectedSlot) : Promise.resolve(),
+        loadInventoryForSlot(selectedSlot),
       ]);
     } finally {
       setIsActionLoading(false);
     }
   }, [pendingDiscard, selectedSlot, loadEquippedItems, loadInventoryForSlot]);
 
-  const inventoryLabel =
-    selectedSlot === null
-      ? "Inventory: "
-      : `Inventory: ${inventoryItems.length} ${selectedSlot}`;
-  const isInventoryLabelWarning = selectedSlot !== null && inventoryItems.length >= 20;
+  const SLOT_PLURAL: Record<string, string> = {
+    Weapon: "Weapons",
+    Helm: "Helms",
+    Shoulders: "Shoulders",
+    Chestpiece: "Chestpieces",
+    Gauntlets: "Gauntlets",
+    Belt: "Belts",
+    Leggings: "Leggings",
+    Boots: "Boots",
+  };
+  const count = inventoryItems.length;
+  const slotLabel = count === 1 ? selectedSlot : (SLOT_PLURAL[selectedSlot] ?? `${selectedSlot}s`);
+  const inventoryLabel = `Inventory: ${count} ${slotLabel}`;
+  const isInventoryLabelWarning = inventoryItems.length >= 20;
+
+  const sortedInventoryItems = React.useMemo(() => {
+    return [...inventoryItems].sort((a, b) => {
+      if (a.is_equipped) return -1;
+      if (b.is_equipped) return 1;
+      return (b.details.strength ?? 0) - (a.details.strength ?? 0);
+    });
+  }, [inventoryItems]);
 
   if (isLoading) {
     return (
@@ -227,80 +248,34 @@ export default function InventoryPage() {
       </div>
 
       <div className="flex flex-col gap-6 lg:flex-row">
-        {/* Left column: Slot list + Equipped */}
-        <div className="w-full shrink-0 lg:w-[260px]">
-          <div className="rounded-lg border bg-card shadow-sm">
-            <div className="grid grid-cols-2 gap-2 border-b px-3 py-1.5 font-semibold">
-              <span>Slot</span>
-              <span className="text-right">Equipped</span>
-            </div>
-            <div className="divide-y">
-              {GEAR_SLOTS.map((slot) => {
-                const isSelected = selectedSlot === slot.type;
-                const equipped = equippedBySlot[slot.type];
-                return (
-                  <div
-                    key={slot.type}
-                    className={cn(
-                      "grid grid-cols-2 gap-2 px-3 py-1.5 transition-colors",
-                      isSelected && "bg-primary/10"
-                    )}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleSlotClick(slot.type)}
-                      title={slot.displayName}
-                      className={cn(
-                        "flex items-center justify-center rounded-md border p-2 transition-colors hover:bg-accent",
-                        isSelected
-                          ? "border-primary font-bold ring-2 ring-primary"
-                          : "border-transparent"
-                      )}
-                    >
-                      <Image
-                        src={getSlotIconUrl(slot.icon)}
-                        alt={slot.displayName}
-                        width={64}
-                        height={64}
-                        className="object-contain"
-                        unoptimized
-                      />
-                    </button>
-                    <div className="flex items-center justify-end">
-                      <button
-                        type="button"
-                        onClick={() => equipped && handleGridItemClick(equipped)}
-                        disabled={!equipped}
-                        className={cn(
-                          "h-16 w-16 shrink-0 rounded border flex items-center justify-center overflow-hidden transition-colors hover:bg-accent disabled:pointer-events-none",
-                          selectedInventoryItem?.gear_id === equipped?.gear_id
-                            ? "ring-2 ring-primary"
-                            : "bg-muted/50"
-                        )}
-                      >
-                        {equipped?.details?.image_url ? (
-                          <Image
-                            src={equipped.details.image_url}
-                            alt={equipped.details.name}
-                            width={64}
-                            height={64}
-                            className="h-full w-full object-contain"
-                            unoptimized
-                          />
-                        ) : null}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+        {/* Left column: Slot label list */}
+        <div className="w-full shrink-0 lg:w-[200px]">
+          <div className="rounded-lg border shadow-sm p-2 bg-[rgb(120,75,0)]">
+            {GEAR_SLOTS.map((slot) => {
+              const isSelected = selectedSlot === slot.type;
+              return (
+                <button
+                  key={slot.type}
+                  type="button"
+                  onClick={() => handleSlotClick(slot.type)}
+                  className={cn(
+                    "w-full text-left px-3 py-2 rounded-md transition-colors text-white",
+                    isSelected
+                      ? "bg-[rgb(160,100,0)] font-medium"
+                      : "hover:bg-accent"
+                  )}
+                >
+                  {slot.displayName}
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {/* Right area: Item details + Inventory grid */}
         <div className="flex flex-1 flex-col gap-6">
-          {/* Top: Item details + Equip/Discard */}
-          <div className="flex flex-col gap-4 rounded-lg border bg-card p-4 shadow-sm sm:flex-row">
+          {/* Top: Item details + Equip/Discard (equipped area) */}
+          <div className="flex flex-col gap-4 rounded-lg border p-4 shadow-sm sm:flex-row bg-[rgb(120,75,0)]">
             <div className="flex flex-1 flex-row items-start gap-4">
               <div className="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted/50">
                 {selectedInventoryItem?.details?.image_url ? (
@@ -335,37 +310,46 @@ export default function InventoryPage() {
                     <span className="text-muted-foreground">___</span>
                   )}
                 </p>
-                <div className="flex items-center gap-1 text-sm">
-                  <span>Affinities:</span>
-                  {selectedInventoryItem?.details?.primary_affinity ? (
-                    <Image
-                      src={getAffinityIconUrl(
-                        selectedInventoryItem.details.primary_affinity
-                      )}
-                      alt={selectedInventoryItem.details.primary_affinity}
-                      width={24}
-                      height={24}
-                      className="rounded object-contain"
-                      unoptimized
-                    />
-                  ) : (
-                    <span className="h-6 w-6 rounded border bg-muted/50" />
-                  )}
-                  {selectedInventoryItem?.details?.secondary_affinity ? (
-                    <Image
-                      src={getAffinityIconUrl(
-                        selectedInventoryItem.details.secondary_affinity
-                      )}
-                      alt={selectedInventoryItem.details.secondary_affinity}
-                      width={24}
-                      height={24}
-                      className="rounded object-contain"
-                      unoptimized
-                    />
-                  ) : (
-                    <span className="h-6 w-6 rounded border bg-muted/50" />
-                  )}
-                </div>
+                {(selectedInventoryItem?.details?.primary_affinity ||
+                  selectedInventoryItem?.details?.secondary_affinity) && (
+                  <div className="flex items-center gap-1 text-sm">
+                    <span>Affinities:</span>
+                    {selectedInventoryItem?.details?.primary_affinity && (
+                      <span
+                        title={selectedInventoryItem.details.primary_affinity}
+                        className="inline-flex"
+                      >
+                        <Image
+                          src={getAffinityIconUrl(
+                            selectedInventoryItem.details.primary_affinity
+                          )}
+                          alt={selectedInventoryItem.details.primary_affinity}
+                          width={24}
+                          height={24}
+                          className="rounded object-contain"
+                          unoptimized
+                        />
+                      </span>
+                    )}
+                    {selectedInventoryItem?.details?.secondary_affinity && (
+                      <span
+                        title={selectedInventoryItem.details.secondary_affinity}
+                        className="inline-flex"
+                      >
+                        <Image
+                          src={getAffinityIconUrl(
+                            selectedInventoryItem.details.secondary_affinity
+                          )}
+                          alt={selectedInventoryItem.details.secondary_affinity}
+                          width={24}
+                          height={24}
+                          className="rounded object-contain"
+                          unoptimized
+                        />
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex flex-col gap-2">
@@ -386,7 +370,7 @@ export default function InventoryPage() {
           </div>
 
           {/* Bottom: Inventory grid */}
-          <div className="rounded-lg border bg-card p-4 shadow-sm">
+          <div className="rounded-lg border p-4 shadow-sm bg-[rgb(120,75,0)]">
             <p
               className={cn(
                 "mb-3 font-medium",
@@ -396,30 +380,64 @@ export default function InventoryPage() {
               {inventoryLabel}
             </p>
             <div className="grid max-h-64 grid-cols-4 gap-2 overflow-y-auto">
-              {inventoryItems.map((item) => (
+              {sortedInventoryItems.map((item) => (
                 <button
                   key={item.gear_id}
                   type="button"
                   onClick={() => handleGridItemClick(item)}
                   className={cn(
-                    "flex h-16 w-full items-center justify-center overflow-hidden rounded-lg border transition-colors hover:bg-accent",
+                    "flex h-16 w-full items-center gap-1 overflow-hidden rounded-lg border px-1 transition-colors hover:bg-accent",
                     selectedInventoryItem?.gear_id === item.gear_id
-                      ? "ring-2 ring-primary"
+                      ? "bg-[rgb(160,100,0)]"
                       : "bg-muted/30"
                   )}
                 >
-                  {item.details?.image_url ? (
-                    <Image
-                      src={item.details.image_url}
-                      alt={item.details.name}
-                      width={64}
-                      height={64}
-                      className="h-full w-full object-contain"
-                      unoptimized
-                    />
-                  ) : (
-                    <span className="text-xs text-muted-foreground">?</span>
-                  )}
+                  <div className="h-12 w-12 shrink-0 flex items-center justify-center overflow-hidden">
+                    {item.details?.image_url ? (
+                      <Image
+                        src={item.details.image_url}
+                        alt={item.details.name}
+                        width={48}
+                        height={48}
+                        className="h-full w-full object-contain"
+                        unoptimized
+                      />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">?</span>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-0.5 shrink-0">
+                    {item.details?.primary_affinity ? (
+                      <span
+                        title={item.details.primary_affinity}
+                        className="inline-flex"
+                      >
+                        <Image
+                          src={getAffinityIconUrl(item.details.primary_affinity)}
+                          alt={item.details.primary_affinity}
+                          width={20}
+                          height={20}
+                          className="rounded object-contain"
+                          unoptimized
+                        />
+                      </span>
+                    ) : null}
+                    {item.details?.secondary_affinity ? (
+                      <span
+                        title={item.details.secondary_affinity}
+                        className="inline-flex"
+                      >
+                        <Image
+                          src={getAffinityIconUrl(item.details.secondary_affinity)}
+                          alt={item.details.secondary_affinity}
+                          width={20}
+                          height={20}
+                          className="rounded object-contain"
+                          unoptimized
+                        />
+                      </span>
+                    ) : null}
+                  </div>
                 </button>
               ))}
             </div>
