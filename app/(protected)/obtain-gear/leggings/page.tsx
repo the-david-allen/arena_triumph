@@ -396,6 +396,8 @@ Try to guess in as few rounds as possible.  Good luck!`;
                 return (
                   <button
                     key={affinity.id}
+                    type="button"
+                    title={affinity.affinity_name as string}
                     onClick={() => !isGameEnding && handleAffinityClick(affinity)}
                     onDragStart={(e) => !isGameEnding && handleAffinityDragStart(e, affinity)}
                     draggable={!isGameEnding}
