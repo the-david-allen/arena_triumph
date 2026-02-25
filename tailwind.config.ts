@@ -8,6 +8,9 @@ const config: Config = {
     "./app/**/*.{ts,tsx}",
     "./src/**/*.{ts,tsx}",
   ],
+  safelist: [
+    { pattern: /^(bg|border|text)-game-board(-panel|-panel-muted|-panel-fill|-border|-border-muted)?$/ },
+  ],
   prefix: "",
   theme: {
     container: {
@@ -69,6 +72,15 @@ const config: Config = {
         },
         navBar: "var(--nav-bar-bg)",
         page: "var(--page-bg)",
+        inventoryPanel: {
+          DEFAULT: "var(--inventory-panel-bg)",
+          foreground: "var(--inventory-panel-fg)",
+        },
+        gameBoardPanel: "var(--game-board-panel-bg)",
+        gameBoardPanelMuted: "hsl(var(--game-board-panel-muted))",
+        gameBoardPanelFill: "hsl(var(--game-board-panel-fill))",
+        gameBoardBorder: "hsl(var(--game-board-border))",
+        gameBoardBorderMuted: "hsl(var(--game-board-border-muted))",
       },
       borderRadius: {
         lg: "var(--radius)",

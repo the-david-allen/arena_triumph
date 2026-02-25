@@ -4,46 +4,58 @@
 
 @layer base {
   :root {
-    /* Legacy shadcn-style (kept for compatibility) */
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Legacy shadcn-style — aligned with Alternative 4 (greyscale) */
+    --background: 0 0% 8%;
+    --foreground: 0 0% 90%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 90%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 90%;
+    --primary: 0 0% 38%;
+    --primary-foreground: 0 0% 96%;
+    --secondary: 0 0% 16%;
+    --secondary-foreground: 0 0% 90%;
+    --muted: 0 0% 48%;
+    --muted-foreground: 0 0% 55%;
+    --accent: 0 0% 16%;
+    --accent-foreground: 0 0% 90%;
+    --destructive: 0 55% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 22%;
+    --input: 0 0% 22%;
+    --ring: 0 0% 45%;
     --radius: 0.5rem;
 
-    /* Theme tokens — light parchment */
-    --bg: 40 25% 97%;
-    --surface: 40 20% 94%;
-    --surface-2: 40 18% 90%;
-    --text: 25 15% 15%;
-    --muted: 25 10% 45%;
-    --border: 40 15% 88%;
-    --ring: 25 30% 25%;
-    --primary: 25 45% 28%;
-    --primary-foreground: 40 30% 96%;
-    --secondary: 40 20% 90%;
-    --secondary-foreground: 25 15% 20%;
-    --danger: 0 65% 50%;
+    /* Theme tokens — Greyscale (Alternative 4) */
+    --bg: 0 0% 8%;
+    --surface: 0 0% 12%;
+    --surface-2: 0 0% 16%;
+    --text: 0 0% 90%;
+    --muted: 0 0% 48%;
+    --border: 0 0% 22%;
+    --ring: 0 0% 45%;
+    --primary: 0 0% 38%;
+    --primary-foreground: 0 0% 96%;
+    --secondary: 0 0% 16%;
+    --secondary-foreground: 0 0% 90%;
+    --danger: 0 55% 48%;
     --danger-foreground: 0 0% 100%;
 
-    /* Nav and page backgrounds */
+    /* Nav and page backgrounds — same as Drop Zone in Alternative 8 (muted/30 over surface) */
     --nav-bar-bg: rgb(45, 25, 65);
-    --page-bg: rgb(211, 211, 211);
+    --page-bg: hsl(216, 10%, 23%);
+
+    /* Inventory panel — same as Alternative 8 (Storm keep) */
+    --inventory-panel-bg: hsl(30, 12%, 11%);
+    --inventory-panel-fg: hsl(35, 15%, 86%);
+
+    /* Game board panels — clearly lighter than page (23%) so the board reads as a distinct card */
+    --game-board-panel-bg: hsl(0, 0%, 30%);
+    --game-board-panel: 0 0% 30%;
+    --game-board-panel-muted: 0 0% 26%;
+    --game-board-panel-fill: 0 0% 28%;
+    --game-board-border: 0 0% 35%;
+    --game-board-border-muted: 0 0% 55%;
   }
 
   .dark {
@@ -69,6 +81,11 @@
   }
 }
 
+/* Game panel background — use var so it applies reliably (Tailwind utility can miss under app/(protected)) */
+.game-panel-bg {
+  background-color: var(--game-board-panel-bg);
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -81,4 +98,166 @@
     font-family: var(--font-display), serif;
     line-height: 1.25;
   }
+}
+
+/* Test page palette overrides — fantasy-themed; avoid Inventory Rarity Lookup colors */
+[data-palette="alt1"] {
+  /* Crypt: dark stone, bronze accents */
+  --page-bg: hsl(25, 15%, 9%);
+  --bg: 25 14% 12%;
+  --surface: 25 12% 16%;
+  --surface-2: 26 10% 20%;
+  --text: 35 20% 88%;
+  --muted: 30 12% 52%;
+  --muted-foreground: 30 12% 58%;
+  --border: 25 12% 24%;
+  --ring: 32 45% 38%;
+  --primary: 32 48% 40%;
+  --primary-foreground: 25 15% 8%;
+  --secondary: 26 10% 20%;
+  --secondary-foreground: 35 20% 88%;
+  --danger: 0 55% 48%;
+  --danger-foreground: 0 0% 100%;
+  --inventory-panel-bg: hsl(28, 35%, 14%);
+  --inventory-panel-fg: hsl(40, 30%, 88%);
+}
+[data-palette="alt2"] {
+  /* Ancient forest: dark moss and earth */
+  --page-bg: hsl(85, 20%, 8%);
+  --bg: 85 18% 11%;
+  --surface: 88 14% 15%;
+  --surface-2: 90 12% 19%;
+  --text: 75 22% 86%;
+  --muted: 82 14% 48%;
+  --muted-foreground: 82 14% 55%;
+  --border: 88 14% 22%;
+  --ring: 70 35% 35%;
+  --primary: 72 38% 34%;
+  --primary-foreground: 85 15% 95%;
+  --secondary: 90 12% 19%;
+  --secondary-foreground: 75 22% 86%;
+  --danger: 0 55% 48%;
+  --danger-foreground: 0 0% 100%;
+  --inventory-panel-bg: hsl(55, 18%, 12%);
+  --inventory-panel-fg: hsl(75, 25%, 85%);
+}
+[data-palette="alt3"] {
+  /* Forge: dark with ember and iron */
+  --page-bg: hsl(15, 25%, 8%);
+  --bg: 15 22% 11%;
+  --surface: 18 18% 15%;
+  --surface-2: 20 15% 19%;
+  --text: 25 20% 88%;
+  --muted: 20 15% 50%;
+  --muted-foreground: 20 15% 56%;
+  --border: 18 16% 24%;
+  --ring: 22 50% 42%;
+  --primary: 22 52% 44%;
+  --primary-foreground: 15 20% 6%;
+  --secondary: 20 15% 19%;
+  --secondary-foreground: 25 20% 88%;
+  --danger: 0 55% 48%;
+  --danger-foreground: 0 0% 100%;
+  --inventory-panel-bg: hsl(20, 40%, 11%);
+  --inventory-panel-fg: hsl(35, 25%, 88%);
+}
+[data-palette="alt4"] {
+  /* Greyscale: shades of grey with black */
+  --page-bg: hsl(0, 0%, 4%);
+  --bg: 0 0% 8%;
+  --surface: 0 0% 12%;
+  --surface-2: 0 0% 16%;
+  --text: 0 0% 90%;
+  --muted: 0 0% 48%;
+  --muted-foreground: 0 0% 55%;
+  --border: 0 0% 22%;
+  --ring: 0 0% 45%;
+  --primary: 0 0% 38%;
+  --primary-foreground: 0 0% 96%;
+  --secondary: 0 0% 16%;
+  --secondary-foreground: 0 0% 90%;
+  --danger: 0 55% 48%;
+  --danger-foreground: 0 0% 100%;
+  --inventory-panel-bg: hsl(0, 0%, 10%);
+  --inventory-panel-fg: hsl(0, 0%, 88%);
+}
+[data-palette="alt5"] {
+  /* Obsidian: near-black, amber accents */
+  --page-bg: hsl(0, 0%, 6%);
+  --bg: 0 0% 10%;
+  --surface: 0 0% 14%;
+  --surface-2: 0 0% 18%;
+  --text: 40 15% 88%;
+  --muted: 35 10% 50%;
+  --muted-foreground: 35 10% 58%;
+  --border: 0 0% 22%;
+  --ring: 38 55% 45%;
+  --primary: 38 60% 48%;
+  --primary-foreground: 0 0% 8%;
+  --secondary: 0 0% 18%;
+  --secondary-foreground: 40 15% 88%;
+  --danger: 0 55% 48%;
+  --danger-foreground: 0 0% 100%;
+  --inventory-panel-bg: hsl(30, 20%, 8%);
+  --inventory-panel-fg: hsl(40, 20%, 85%);
+}
+[data-palette="alt6"] {
+  /* Shadow court: dark purple-brown (no Epic lavender) */
+  --page-bg: hsl(280, 15%, 9%);
+  --bg: 278 14% 12%;
+  --surface: 276 12% 16%;
+  --surface-2: 272 10% 20%;
+  --text: 285 18% 86%;
+  --muted: 275 12% 48%;
+  --muted-foreground: 275 12% 54%;
+  --border: 278 12% 24%;
+  --ring: 290 22% 40%;
+  --primary: 288 28% 38%;
+  --primary-foreground: 280 12% 96%;
+  --secondary: 272 10% 20%;
+  --secondary-foreground: 285 18% 86%;
+  --danger: 0 55% 48%;
+  --danger-foreground: 0 0% 100%;
+  --inventory-panel-bg: hsl(275, 22%, 11%);
+  --inventory-panel-fg: hsl(285, 20%, 86%);
+}
+[data-palette="alt7"] {
+  /* Dragon hoard: dark with brass/gold accents */
+  --page-bg: hsl(45, 25%, 8%);
+  --bg: 42 22% 11%;
+  --surface: 40 18% 15%;
+  --surface-2: 38 15% 19%;
+  --text: 45 25% 88%;
+  --muted: 42 15% 48%;
+  --muted-foreground: 42 15% 54%;
+  --border: 40 16% 24%;
+  --ring: 45 55% 42%;
+  --primary: 44 58% 44%;
+  --primary-foreground: 42 25% 6%;
+  --secondary: 38 15% 19%;
+  --secondary-foreground: 45 25% 88%;
+  --danger: 0 55% 48%;
+  --danger-foreground: 0 0% 100%;
+  --inventory-panel-bg: hsl(38, 35%, 12%);
+  --inventory-panel-fg: hsl(45, 30%, 88%);
+}
+[data-palette="alt8"] {
+  /* Storm keep: dark slate with cool gray accents */
+  --page-bg: hsl(220, 12%, 10%);
+  --bg: 218 11% 13%;
+  --surface: 216 10% 17%;
+  --surface-2: 214 9% 21%;
+  --text: 212 18% 86%;
+  --muted: 215 10% 50%;
+  --muted-foreground: 215 10% 56%;
+  --border: 218 10% 25%;
+  --ring: 210 12% 45%;
+  --primary: 212 18% 48%;
+  --primary-foreground: 220 15% 8%;
+  --secondary: 214 9% 21%;
+  --secondary-foreground: 212 18% 86%;
+  --danger: 0 55% 48%;
+  --danger-foreground: 0 0% 100%;
+  --inventory-panel-bg: hsl(30, 12%, 11%);
+  --inventory-panel-fg: hsl(35, 15%, 86%);
 }

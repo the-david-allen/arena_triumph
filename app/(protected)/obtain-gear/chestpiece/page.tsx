@@ -439,7 +439,7 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
   // Show completion screen if flag is set
   if (showCompletionScreen) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-200 p-6">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-page p-6">
         <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center space-y-4">
           <h2 className="text-3xl font-bold">Game Complete!</h2>
           <p className="text-lg">Congratulations! You have completed the game.</p>
@@ -471,7 +471,7 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
   }
 
   return (
-    <div className="space-y-6 p-6 min-h-screen bg-gray-200">
+    <div className="space-y-6 p-6 min-h-screen bg-page">
       {/* Header with buttons */}
       <div className="flex justify-between items-center">
         <Button
@@ -542,14 +542,14 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
                     <div className="text-sm text-gray-600">Empty</div>
                   )}
                 </button>
-                <div className="text-xs text-gray-600">Deck</div>
+                <div className="text-xs text-white">Deck</div>
               </div>
 
               {/* Current Card - displayed to the right of Deck */}
               {currentCard && (
                 <div className="flex flex-col items-center gap-2">
                   <Card card={currentCard} />
-                  <div className="text-xs text-gray-600">Drag to slot or discard</div>
+                  <div className="text-xs text-white">Drag to slot or discard</div>
                 </div>
               )}
             </div>
@@ -571,10 +571,10 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
                     <div className="text-xs mt-1">{discardPile.length}</div>
                   </div>
                 ) : (
-                  <div className="text-xs text-gray-500">Discard</div>
+                  <div className="text-xs text-white">Discard</div>
                 )}
               </div>
-              <div className="text-xs text-gray-600">Discard</div>
+              <div className="text-xs text-white">Discard</div>
             </div>
 
             {/* Current Score */}

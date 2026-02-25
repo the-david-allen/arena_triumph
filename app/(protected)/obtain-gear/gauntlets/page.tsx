@@ -855,7 +855,7 @@ export default function GauntletsPage() {
   /* ─────────── Completion screen ─────────── */
   if (showCompletionScreen) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-200 p-6">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-page p-6">
         <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center space-y-4">
           <h2 className="text-3xl font-bold">Game Complete!</h2>
           <p className="text-lg">You have completed the game.</p>
@@ -893,7 +893,7 @@ export default function GauntletsPage() {
 
   /* ─────────── Main page ─────────── */
   return (
-    <div className="space-y-6 p-6 min-h-screen bg-gray-200">
+    <div className="space-y-6 p-6 min-h-screen bg-page">
       <div className="flex justify-between items-center">
         <Button
           onClick={() => void handlePlayGame()}

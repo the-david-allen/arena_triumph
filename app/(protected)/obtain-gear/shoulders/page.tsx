@@ -79,7 +79,7 @@ function rollDice(count: number): RolledDie[] {
 function DieFaceIcon({ face, size = "md" }: { face: DieFace; size?: "sm" | "md" }) {
   const dim = size === "sm" ? "w-8 h-8" : "w-14 h-14";
   return (
-    <span className={`relative inline-block ${dim} shrink-0 rounded border border-gray-400 bg-white overflow-hidden [&>img]:object-cover`}>
+    <span className={`relative inline-block ${dim} shrink-0 rounded border border-game-board-border-muted game-panel-bg overflow-hidden [&>img]:object-cover`}>
       <Image
         src={DIE_FACE_IMAGES[face]}
         alt={face}
@@ -94,7 +94,7 @@ function DieFaceIcon({ face, size = "md" }: { face: DieFace; size?: "sm" | "md" 
 
 function ScoringReferenceBox() {
   return (
-    <div className="rounded-lg border-2 border-gray-700 bg-card p-4 shadow-md w-[333px] shrink-0">
+    <div className="rounded-lg border-2 border-game-board-border game-panel-bg p-4 shadow-md w-[333px] shrink-0">
       <h3 className="font-semibold text-sm mb-3">Valid Scoring Combinations</h3>
       <ul className="space-y-2 text-sm">
         <li className="flex items-center gap-2 flex-wrap">
@@ -107,26 +107,26 @@ function ScoringReferenceBox() {
         </li>
         <li className="flex items-center gap-2 flex-wrap">
           <DieFaceIcon face="Armor" size="sm" />
-          <span className="text-black">×3</span>
+          <span className="text-white">×3</span>
           <span>or</span>
           <DieFaceIcon face="Weapon" size="sm" />
-          <span className="text-black">×3</span>
+          <span className="text-white">×3</span>
           <span>: 800</span>
         </li>
         <li className="flex items-center gap-2 flex-wrap">
           <DieFaceIcon face="Aquatic" size="sm" />
-          <span className="text-black">×3</span>
+          <span className="text-white">×3</span>
           <span>or</span>
           <DieFaceIcon face="Fire" size="sm" />
-          <span className="text-black">×3</span>
+          <span className="text-white">×3</span>
           <span>: 250</span>
         </li>
         <li className="flex items-center gap-2 flex-wrap">
           <DieFaceIcon face="Verdant" size="sm" />
-          <span className="text-black">×3</span>
+          <span className="text-white">×3</span>
           <span>or</span>
           <DieFaceIcon face="Rock" size="sm" />
-          <span className="text-black">×3</span>
+          <span className="text-white">×3</span>
           <span>: 500</span>
         </li>
         <li className="flex items-center gap-2 flex-wrap">
@@ -176,7 +176,7 @@ function Die({
           onClick?.();
         }
       }}
-      className={`relative w-14 h-14 shrink-0 rounded border-2 border-gray-400 bg-white overflow-hidden ${
+      className={`relative w-14 h-14 shrink-0 rounded border-2 border-game-board-border-muted game-panel-bg overflow-hidden ${
         disabled ? "pointer-events-none opacity-60" : "cursor-pointer hover:border-primary"
       }`}
       style={{
@@ -404,8 +404,8 @@ export default function ShouldersPage() {
 
   if (showCompletionScreen) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] bg-background p-6">
-        <div className="max-w-md w-full bg-card rounded-lg shadow-lg border p-8 text-center space-y-4">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] bg-page p-6">
+        <div className="max-w-md w-full game-panel-bg rounded-lg shadow-lg border border-game-board-border p-8 text-center space-y-4">
           <h2 className="text-3xl font-bold">Game Complete!</h2>
           <p className="text-lg">You have completed the game.</p>
           <div className="text-2xl font-bold">Final Score: {finalScore}</div>
@@ -414,7 +414,7 @@ export default function ShouldersPage() {
               <p className="text-sm text-muted-foreground mb-2">
                 You have been rewarded with:
               </p>
-              <p className="text-xl font-semibold text-primary mb-3">{rewardItem.name}</p>
+              <p className="text-xl font-semibold text-white mb-3">{rewardItem.name}</p>
               {rewardItem.image_url && (
                 <div className="flex justify-center">
                   <Image
@@ -452,7 +452,7 @@ export default function ShouldersPage() {
   };
 
   return (
-    <div className="space-y-6 p-6 min-h-screen bg-background">
+    <div className="space-y-6 p-6 min-h-screen bg-page">
       <div className="flex justify-between items-center">
         <Button
           onClick={() => void handlePlayGame()}
@@ -475,7 +475,7 @@ export default function ShouldersPage() {
 
       {isGameActive ? (
         <div className="flex flex-row gap-6 items-start">
-          <div className="border-2 border-gray-800 rounded-lg p-4 bg-card shadow-lg space-y-4 flex-1 min-w-0">
+          <div className="border-2 border-game-board-border rounded-lg p-4 game-panel-bg shadow-lg space-y-4 flex-1 min-w-0">
           <div className="flex justify-between items-center">
             <div className="flex gap-6">
               <span>

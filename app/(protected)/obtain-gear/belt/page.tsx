@@ -472,8 +472,8 @@ Left click on a square to make it dark green. Long-press or right-click to mark 
   // Show completion screen
   if (showCompletionScreen) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-200 p-6">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center space-y-4">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-page p-6">
+        <div className="max-w-md w-full game-panel-bg rounded-lg shadow-lg p-8 text-center space-y-4">
           <h2 className="text-3xl font-bold">Game Complete!</h2>
           <p className="text-lg">Congratulations! You have completed the puzzle.</p>
           <div className="text-2xl font-bold">Time: {finalSeconds} seconds</div>
@@ -513,7 +513,7 @@ Left click on a square to make it dark green. Long-press or right-click to mark 
   const maxColHintLength = columnHints.length > 0 ? Math.max(...columnHints.map((h) => h.length || 0), 0) : 0;
 
   return (
-    <div className="space-y-6 p-6 min-h-screen bg-gray-200">
+    <div className="space-y-6 p-6 min-h-screen bg-page">
       {/* Header with buttons */}
       <div className="flex justify-between items-center">
         <Button
@@ -553,7 +553,7 @@ Left click on a square to make it dark green. Long-press or right-click to mark 
 
           {/* Nonogram Grid */}
           <div className="flex justify-center">
-            <div className="inline-block bg-white p-4 rounded-lg shadow-lg">
+            <div className="inline-block game-panel-bg p-4 rounded-lg shadow-lg">
               {/* Column hints */}
               <div className="flex">
                 {/* Empty space for row hints */}
@@ -627,7 +627,7 @@ Left click on a square to make it dark green. Long-press or right-click to mark 
                 {/* Game grid */}
                 <div
                   ref={gridContainerRef}
-                  className="grid gap-1 border-2 border-gray-800 p-1"
+                  className="grid gap-1 border-2 border-game-board-border p-1"
                   style={{
                     gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`,
                     gridTemplateRows: `repeat(${GRID_SIZE}, 1fr)`,
@@ -648,12 +648,12 @@ Left click on a square to make it dark green. Long-press or right-click to mark 
                               data-belt-row={rowIndex}
                               data-belt-col={colIndex}
                               className={cn(
-                                "w-10 h-10 border border-gray-400 flex items-center justify-center cursor-pointer transition-colors relative",
+                                "w-10 h-10 border border-game-board-border-muted flex items-center justify-center cursor-pointer transition-colors relative",
                                 cellState === true
-                                  ? "bg-[rgb(70,180,90)]"
+                                  ? "bg-[rgb(55,150,75)]"
                                   : cellState === false
-                                  ? "bg-gray-300"
-                                  : "bg-white hover:bg-gray-100",
+                                  ? "bg-black"
+                                  : "bg-gray-500 hover:bg-gray-600",
                                 isGameEnding && "pointer-events-none opacity-50"
                               )}
                               onClick={(e) => {
@@ -740,7 +740,7 @@ Left click on a square to make it dark green. Long-press or right-click to mark 
                               onTouchCancel={handleCellTouchEnd}
                             >
                               {cellState === false && (
-                                <span className="text-gray-700 font-bold text-lg">✕</span>
+                                <span className="text-white font-bold text-lg">✕</span>
                               )}
                             </div>
                           );

@@ -670,8 +670,8 @@ export default function WeaponPage() {
   // Show completion screen
   if (showCompletionScreen) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-200 p-6">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center space-y-4">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-page p-6">
+        <div className="max-w-md w-full game-panel-bg rounded-lg shadow-lg p-8 text-center space-y-4">
           <h2 className="text-3xl font-bold">Game Complete!</h2>
           <p className="text-lg">Congratulations! You have completed the game.</p>
           <div className="text-2xl font-bold">Turns Taken: {finalTurns}</div>
@@ -707,7 +707,7 @@ export default function WeaponPage() {
   }
 
   return (
-    <div className="space-y-6 p-6 min-h-screen bg-gray-200">
+    <div className="space-y-6 p-6 min-h-screen bg-page">
       {/* Header with buttons */}
       <div className="flex justify-between items-center">
         <Button
@@ -735,7 +735,7 @@ export default function WeaponPage() {
           </div>
 
           {/* Buttons and Dice areas */}
-          <div className="bg-white p-4 rounded-lg shadow-lg">
+          <div className="game-panel-bg p-4 rounded-lg shadow-lg">
             <div className="flex flex-col md:flex-row gap-4 justify-center items-start">
               {/* Buttons - fixed width so location stays consistent */}
               <div className="flex flex-col gap-2 items-center justify-center w-[140px] min-w-[140px] shrink-0">
@@ -774,8 +774,8 @@ export default function WeaponPage() {
               <div
                 className={cn(
                   "border-2 rounded-lg p-4 w-[280px] min-w-[280px] h-[120px] flex flex-col items-center justify-center cursor-pointer shrink-0",
-                  (highlightedDiceArea === "rolled" || highlightedDiceArea === "both") && "bg-green-500 border-green-700",
-                  highlightedDiceArea !== "rolled" && highlightedDiceArea !== "both" && "border-gray-400 bg-gray-50"
+                  (highlightedDiceArea === "rolled" || highlightedDiceArea === "both") && "bg-[rgb(55,150,75)] border-[rgb(45,130,65)]",
+                  highlightedDiceArea !== "rolled" && highlightedDiceArea !== "both" && "border-game-board-border-muted bg-game-board-panel-muted"
                 )}
                 onClick={() => handleDiceAreaClick("rolled")}
               >
@@ -813,8 +813,8 @@ export default function WeaponPage() {
               <div
                 className={cn(
                   "border-2 rounded-lg p-4 w-[280px] min-w-[280px] h-[120px] flex flex-col items-center justify-center shrink-0",
-                  (highlightedDiceArea === "separated" || highlightedDiceArea === "both") && "bg-green-500 border-green-700",
-                  highlightedDiceArea !== "separated" && highlightedDiceArea !== "both" && "border-gray-400 bg-gray-50"
+                  (highlightedDiceArea === "separated" || highlightedDiceArea === "both") && "bg-[rgb(55,150,75)] border-[rgb(45,130,65)]",
+                  highlightedDiceArea !== "separated" && highlightedDiceArea !== "both" && "border-game-board-border-muted bg-game-board-panel-muted"
                 )}
                 onDrop={handleSeparatedDrop}
                 onDragOver={handleDragOver}
@@ -849,7 +849,7 @@ export default function WeaponPage() {
           </div>
 
           {/* Grid + checklist: grid centered in left half, gear list centered in right half */}
-          <div className="bg-white p-4 rounded-lg shadow-lg flex min-h-[400px] overflow-x-auto">
+          <div className="game-panel-bg p-4 rounded-lg shadow-lg flex min-h-[400px] overflow-x-auto">
             <div className="w-1/2 flex justify-center items-center min-w-0">
               <div className="flex gap-2 justify-center min-w-max">
               {COLUMNS.map((columnValue, colIndex) => {
@@ -888,11 +888,11 @@ export default function WeaponPage() {
                           <div
                             key={rowIndex}
                             className={cn(
-                              "w-10 h-10 border-2 border-gray-400 flex items-center justify-center",
+                              "w-10 h-10 border-2 border-game-board-border-muted flex items-center justify-center",
                               cellState === "marked" && "bg-black",
-                              cellState === "highlighted" && "bg-green-500",
+                              cellState === "highlighted" && "bg-[rgb(55,150,75)]",
                               cellState === "lost" && "bg-red-500",
-                              cellState === null && "bg-white"
+                              cellState === null && "game-panel-bg"
                             )}
                           />
                         );
@@ -903,7 +903,7 @@ export default function WeaponPage() {
                     <div className={cn(
                       "mt-1 w-10 h-10 flex items-center justify-center rounded border-2 transition-colors",
                       gridState[colIndex].some(cell => cell === "highlighted") 
-                        ? "bg-green-500 border-green-700" 
+                        ? "bg-[rgb(55,150,75)] border-[rgb(45,130,65)]" 
                         : "border-transparent"
                     )}>
                       <Image
@@ -923,7 +923,7 @@ export default function WeaponPage() {
 
             {/* Gear completion checklist - right half, centered */}
             <div className="w-1/2 flex justify-center items-center min-w-0">
-              <div className="flex flex-col gap-1.5 shrink-0 border border-gray-300 rounded-lg p-3 bg-gray-50">
+              <div className="flex flex-col gap-1.5 shrink-0 border border-game-board-border-muted rounded-lg p-3 bg-game-board-panel-muted">
               {[
                 { key: "helm", label: "Helm", done: gearCompletion.helm },
                 { key: "chestpiece", label: "Chestpiece", done: gearCompletion.chestpiece },
@@ -937,12 +937,12 @@ export default function WeaponPage() {
                   <div
                     className={cn(
                       "w-6 h-6 border-2 flex items-center justify-center shrink-0 rounded",
-                      done ? "bg-green-600 border-green-700 text-white" : "border-gray-400 bg-white"
+                      done ? "bg-green-600 border-green-700 text-white" : "border-game-board-border-muted game-panel-bg"
                     )}
                   >
                     {done && <Check className="w-4 h-4" strokeWidth={3} />}
                   </div>
-                  <span className="text-sm font-medium text-gray-800">{label}</span>
+                  <span className="text-sm font-medium text-white">{label}</span>
                 </div>
               ))}
               </div>

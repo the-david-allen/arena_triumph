@@ -269,7 +269,7 @@ export default function InventoryPage() {
       <div className="flex flex-col gap-6 lg:flex-row">
         {/* Left column: Slot label list */}
         <div className="w-full shrink-0 lg:w-[200px]">
-          <div className="rounded-lg border shadow-sm p-2 bg-[rgb(120,75,0)]">
+          <div className="rounded-lg border shadow-sm p-2 bg-[var(--inventory-panel-bg)] text-[var(--inventory-panel-fg)]">
             {GEAR_SLOTS.map((slot) => {
               const isSelected = selectedSlot === slot.type;
               return (
@@ -278,10 +278,10 @@ export default function InventoryPage() {
                   type="button"
                   onClick={() => handleSlotClick(slot.type)}
                   className={cn(
-                    "w-full text-left px-3 py-2 rounded-md transition-colors text-white",
+                    "w-full text-left px-3 py-2 rounded-md transition-colors",
                     isSelected
-                      ? "bg-[rgb(160,100,0)] font-medium"
-                      : "hover:bg-accent"
+                      ? "bg-primary/30 font-medium text-[var(--inventory-panel-fg)]"
+                      : "hover:bg-white/10"
                   )}
                 >
                   {slot.displayName}
@@ -294,7 +294,7 @@ export default function InventoryPage() {
         {/* Right area: Item details + Inventory grid */}
         <div className="flex flex-1 flex-col gap-6">
           {/* Top: Item details + Equip/Discard (equipped area) */}
-          <div className="flex flex-col gap-4 rounded-lg border p-4 shadow-sm sm:flex-row bg-[rgb(120,75,0)]">
+          <div className="flex flex-col gap-4 rounded-lg border p-4 shadow-sm sm:flex-row bg-[var(--inventory-panel-bg)] text-[var(--inventory-panel-fg)]">
             <div className="flex flex-1 flex-row items-start gap-4">
               <div className="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted/50">
                 {selectedInventoryItem?.details?.image_url ? (
@@ -393,10 +393,10 @@ export default function InventoryPage() {
           </p>
 
           {/* Bottom: Inventory grid */}
-          <div className="rounded-lg border p-4 shadow-sm bg-[rgb(120,75,0)]">
+          <div className="rounded-lg border p-4 shadow-sm bg-[var(--inventory-panel-bg)] text-[var(--inventory-panel-fg)]">
             <p
               className={cn(
-                "mb-3 font-medium text-white",
+                "mb-3 font-medium",
                 isInventoryLabelWarning && "font-bold text-destructive"
               )}
             >
@@ -409,9 +409,9 @@ export default function InventoryPage() {
                   type="button"
                   onClick={() => handleGridItemClick(item)}
                   className={cn(
-                    "flex h-16 w-full items-center gap-1 overflow-hidden rounded-lg border px-1 transition-colors hover:bg-accent",
+                    "flex h-16 w-full items-center gap-1 overflow-hidden rounded-lg border px-1 transition-colors hover:bg-white/10",
                     selectedInventoryItem?.gear_id === item.gear_id
-                      ? "bg-[rgb(160,100,0)]"
+                      ? "bg-primary/30"
                       : "bg-muted/30"
                   )}
                 >
@@ -470,16 +470,21 @@ export default function InventoryPage() {
 
       {/* Rarity Lookup dialog */}
       <Dialog open={showRarityLookup} onOpenChange={setShowRarityLookup}>
-        <DialogContent className="bg-black border-black">
+        <DialogContent className="bg-black border-gray-500">
           <DialogHeader>
             <DialogTitle className="text-white">Rarity Lookup</DialogTitle>
           </DialogHeader>
-          <div className="space-y-1 py-2">
-            {RARITY_DISPLAY.map(({ name, color }) => (
-              <div key={name} style={{ color }}>
-                {name}
-              </div>
-            ))}
+          <div className="flex gap-6 py-2 items-center">
+            <div className="w-1/2 space-y-1">
+              {RARITY_DISPLAY.map(({ name, color }) => (
+                <div key={name} style={{ color }}>
+                  {name}
+                </div>
+              ))}
+            </div>
+            <p className="w-1/2 text-sm text-gray-300 flex items-center">
+              An item&apos;s rarity can be determined by the border around it&apos;s image.
+            </p>
           </div>
         </DialogContent>
       </Dialog>

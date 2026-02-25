@@ -326,7 +326,7 @@ Try to guess in as few rounds as possible.  Good luck!`;
   // Show completion screen
   if (showCompletionScreen) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-200 p-6">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-page p-6">
         <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center space-y-4">
           <h2 className="text-3xl font-bold">Game Complete!</h2>
           <p className="text-lg">Congratulations! You have completed the game.</p>
@@ -363,7 +363,7 @@ Try to guess in as few rounds as possible.  Good luck!`;
   }
 
   return (
-    <div className="space-y-6 p-6 min-h-screen bg-gray-200">
+    <div className="space-y-6 p-6 min-h-screen bg-page">
       {/* Header with buttons */}
       <div className="flex justify-between items-center">
         <Button
@@ -387,8 +387,8 @@ Try to guess in as few rounds as possible.  Good luck!`;
       {isGameActive && (
         <div className="space-y-6">
           {/* Affinities header */}
-          <div className="flex items-center gap-4 bg-white rounded-lg shadow-md p-4">
-            <span className="font-semibold text-lg">Affinities:</span>
+          <div className="flex items-center gap-4 bg-gray-500 rounded-lg shadow-md p-4">
+            <span className="font-semibold text-lg text-white">Affinities:</span>
             <div className="flex gap-2 flex-wrap">
               {allAffinities.map((affinity) => {
                 const affinityName = (affinity.affinity_name as string).toLowerCase();
@@ -421,11 +421,11 @@ Try to guess in as few rounds as possible.  Good luck!`;
               })}
             </div>
             <Button 
-              variant="outline" 
+              variant="secondary" 
               onClick={() => setShowStrengths(true)} 
-              className="ml-auto bg-amber-100 hover:bg-amber-200 border-amber-300 text-amber-900 shadow-lg"
+              className="ml-auto"
             >
-              Strengths
+              Affinity Reference
             </Button>
           </div>
 

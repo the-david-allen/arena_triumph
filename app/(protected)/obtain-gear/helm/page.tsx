@@ -427,8 +427,8 @@ Also, each piece of equipment you use (meaning you have 1 or more cells filled i
   // Show completion screen
   if (showCompletionScreen) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-200 p-6">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center space-y-4">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-page p-6">
+        <div className="max-w-md w-full game-panel-bg rounded-lg shadow-lg p-8 text-center space-y-4">
           <h2 className="text-3xl font-bold">Game Complete!</h2>
           <p className="text-lg">Congratulations! You have completed the game.</p>
           <div className="text-2xl font-bold">Total Score: {finalScore}</div>
@@ -464,7 +464,7 @@ Also, each piece of equipment you use (meaning you have 1 or more cells filled i
   }
 
   return (
-    <div className="space-y-6 p-6 min-h-screen bg-gray-200">
+    <div className="space-y-6 p-6 min-h-screen bg-page">
       {/* Header with buttons */}
       <div className="flex justify-between items-center">
         <Button
@@ -486,119 +486,122 @@ Also, each piece of equipment you use (meaning you have 1 or more cells filled i
       {/* Game board */}
       {isGameActive && (
         <div className="space-y-6">
-          {/* Scores and Strikes */}
-          <div className="flex gap-8 justify-center items-center">
-            <div className="text-center">
-              <div className="text-sm text-gray-600">Strength</div>
-              <div className="text-2xl font-bold">{strength}</div>
+          {/* Scores, dice area, and controls — same panel background as grid */}
+          <div className="border-4 border-white/40 rounded-lg p-4 shadow-lg game-panel-bg space-y-6 text-white">
+            {/* Scores and Strikes */}
+            <div className="flex gap-8 justify-center items-center">
+              <div className="text-center">
+                <div className="text-sm text-gray-200">Strength</div>
+                <div className="text-2xl font-bold">{strength}</div>
+              </div>
+              <div className="text-center">
+                <div className="text-sm text-gray-200">Encumberance</div>
+                <div className="text-2xl font-bold">{encumberance}</div>
+              </div>
+              <div className="text-center">
+                <div className="text-sm text-gray-200">Total Score</div>
+                <div className="text-2xl font-bold">{totalScore}</div>
+              </div>
+              <div className="text-center">
+                <div className="text-sm text-gray-200">Strikes Remaining</div>
+                <div className="text-2xl font-bold">{strikesRemaining}</div>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="text-sm text-gray-600">Encumberance</div>
-              <div className="text-2xl font-bold">{encumberance}</div>
-            </div>
-            <div className="text-center">
-              <div className="text-sm text-gray-600">Total Score</div>
-              <div className="text-2xl font-bold">{totalScore}</div>
-            </div>
-            <div className="text-center">
-              <div className="text-sm text-gray-600">Strikes Remaining</div>
-              <div className="text-2xl font-bold">{strikesRemaining}</div>
-            </div>
+
+            {/* Dice Area */}
+            {!diceRoll && (
+              <div className="flex justify-center">
+                <Button onClick={rollDice} size="lg" disabled={isGameEnding}>
+                  Roll
+                </Button>
+              </div>
+            )}
+
+            {diceRoll && (
+              <div className="flex gap-8 items-start justify-center">
+                {/* Action Buttons on the left */}
+                <div className="flex flex-col gap-4">
+                  <Button
+                    onClick={handlePlaceValue}
+                    disabled={!canPlaceSelected()}
+                    size="lg"
+                  >
+                    Place Value
+                  </Button>
+                  <Button
+                    onClick={handleStrike}
+                    variant="destructive"
+                    size="lg"
+                  >
+                    Strike
+                  </Button>
+                </div>
+
+                {/* Dice and message */}
+                <div className="flex items-center gap-6">
+                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                  {/* Numbered Dice */}
+                  {diceRoll.numbered.map((value, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedNumberedDieIndex(index)}
+                      className={cn(
+                        "w-16 h-16 rounded-lg flex items-center justify-center transition-all overflow-hidden p-0 bg-transparent",
+                        selectedNumberedDieIndex === index
+                          ? "border-[7px] border-blue-600 scale-110"
+                          : "border-2 border-transparent hover:border-game-board-border-muted hover:scale-105"
+                      )}
+                      style={{
+                        transform: `rotate(${diceRotations[index]}deg)`,
+                      }}
+                    >
+                      <Image
+                        src={`${DICE_IMAGES_BASE_URL}/${NUMBERED_DICE_IMAGE_MAP[value]}`}
+                        alt={`${value}`}
+                        width={64}
+                        height={64}
+                        className="object-cover w-full h-full min-w-full min-h-full"
+                        unoptimized
+                      />
+                    </button>
+                  ))}
+
+                  {/* Slot Dice */}
+                  {diceRoll.slot.map((slot, index) => (
+                    <button
+                      key={index + 2}
+                      onClick={() => setSelectedSlotDieIndex(index)}
+                      className={cn(
+                        "w-16 h-16 rounded-lg flex items-center justify-center transition-all overflow-hidden p-0 bg-transparent",
+                        selectedSlotDieIndex === index
+                          ? "border-[7px] border-blue-600 scale-110"
+                          : "border-2 border-transparent hover:border-game-board-border-muted hover:scale-105"
+                      )}
+                      style={{
+                        transform: `rotate(${diceRotations[index + 2]}deg)`,
+                      }}
+                    >
+                      <Image
+                        src={`${CDN_BASE_URL}/${SLOT_IMAGE_MAP[slot]}`}
+                        alt={slot}
+                        width={64}
+                        height={64}
+                        className="object-cover w-full h-full min-w-full min-h-full"
+                        unoptimized
+                      />
+                    </button>
+                  ))}
+                </div>
+                <p className="text-sm text-gray-200 max-w-[240px] ml-4">
+                  Select one numeric die and one equipment die to place. Or use a Strike to pass the turn.
+                </p>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Dice Area */}
-          {!diceRoll && (
-            <div className="flex justify-center">
-              <Button onClick={rollDice} size="lg" disabled={isGameEnding}>
-                Roll
-              </Button>
-            </div>
-          )}
-
-          {diceRoll && (
-            <div className="flex gap-8 items-start justify-center">
-              {/* Action Buttons on the left */}
-              <div className="flex flex-col gap-4">
-                <Button
-                  onClick={handlePlaceValue}
-                  disabled={!canPlaceSelected()}
-                  size="lg"
-                >
-                  Place Value
-                </Button>
-                <Button
-                  onClick={handleStrike}
-                  variant="destructive"
-                  size="lg"
-                >
-                  Strike
-                </Button>
-              </div>
-
-              {/* Dice and message */}
-              <div className="flex items-center gap-6">
-              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                {/* Numbered Dice */}
-                {diceRoll.numbered.map((value, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedNumberedDieIndex(index)}
-                    className={cn(
-                      "w-16 h-16 rounded-lg flex items-center justify-center transition-all overflow-hidden p-0 bg-transparent",
-                      selectedNumberedDieIndex === index
-                        ? "border-[7px] border-blue-600 scale-110"
-                        : "border-2 border-transparent hover:border-gray-400 hover:scale-105"
-                    )}
-                    style={{
-                      transform: `rotate(${diceRotations[index]}deg)`,
-                    }}
-                  >
-                    <Image
-                      src={`${DICE_IMAGES_BASE_URL}/${NUMBERED_DICE_IMAGE_MAP[value]}`}
-                      alt={`${value}`}
-                      width={64}
-                      height={64}
-                      className="object-cover w-full h-full min-w-full min-h-full"
-                      unoptimized
-                    />
-                  </button>
-                ))}
-
-                {/* Slot Dice */}
-                {diceRoll.slot.map((slot, index) => (
-                  <button
-                    key={index + 2}
-                    onClick={() => setSelectedSlotDieIndex(index)}
-                    className={cn(
-                      "w-16 h-16 rounded-lg flex items-center justify-center transition-all overflow-hidden p-0 bg-transparent",
-                      selectedSlotDieIndex === index
-                        ? "border-[7px] border-blue-600 scale-110"
-                        : "border-2 border-transparent hover:border-gray-400 hover:scale-105"
-                    )}
-                    style={{
-                      transform: `rotate(${diceRotations[index + 2]}deg)`,
-                    }}
-                  >
-                    <Image
-                      src={`${CDN_BASE_URL}/${SLOT_IMAGE_MAP[slot]}`}
-                      alt={slot}
-                      width={64}
-                      height={64}
-                      className="object-cover w-full h-full min-w-full min-h-full"
-                      unoptimized
-                    />
-                  </button>
-                ))}
-              </div>
-              <p className="text-sm text-gray-600 max-w-[240px] ml-4">
-                Select one numeric die and one equipment die to place. Or use a Strike to pass the turn.
-              </p>
-              </div>
-            </div>
-          )}
-
           {/* Grid */}
-          <div className="border-2 border-gray-800 rounded-lg p-4 bg-white">
+          <div className="border-4 border-white/40 rounded-lg p-4 shadow-lg game-panel-bg">
             <div className="grid grid-cols-6 gap-2">
               {SLOT_ORDER.map((slot, columnIndex) => {
                 const isHighlighted = highlightedColumns.has(columnIndex);
@@ -609,8 +612,8 @@ Also, each piece of equipment you use (meaning you have 1 or more cells filled i
                     key={slot} 
                     className={cn(
                       "flex flex-col rounded-lg transition-all",
-                      isGrey && "bg-gray-300 p-2",
-                      isHighlighted && !isGrey && "bg-yellow-200 p-2 ring-2 ring-yellow-400"
+                      isGrey && "bg-black p-2 ring-2 ring-gray-700",
+                      isHighlighted && !isGrey && "bg-gray-400 p-2 ring-2 ring-gray-500"
                     )}
                   >
                     {/* Column cells - render from top to bottom */}
@@ -621,8 +624,8 @@ Also, each piece of equipment you use (meaning you have 1 or more cells filled i
                           className={cn(
                             "w-full h-12 border-2 rounded flex items-center justify-center font-bold text-lg",
                             value !== null
-                              ? "border-gray-600 bg-gray-100"
-                              : "border-gray-300 bg-gray-50"
+                              ? "border-game-board-border bg-game-board-panel-muted"
+                              : "border-game-board-border-muted bg-game-board-panel-muted"
                           )}
                         >
                           {value !== null ? value : ""}
@@ -630,9 +633,9 @@ Also, each piece of equipment you use (meaning you have 1 or more cells filled i
                       ))}
                     </div>
                     {/* Column header image at bottom */}
-                    <div className="flex justify-center items-center gap-2 h-16 border-t-2 border-gray-400 pt-2">
+                    <div className="flex justify-center items-center gap-2 h-16 border-t-2 border-game-board-border-muted pt-2">
                       {hasValueInColumn(columnIndex) && (
-                        <span className="text-xs text-gray-600 font-semibold">
+                        <span className="text-xs text-white font-semibold">
                           {ENCUMBERANCE_VALUE}
                         </span>
                       )}

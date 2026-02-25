@@ -83,7 +83,7 @@ export function GameSlot({
       {card ? (
         <Card card={card} isHighlighted={isHighlighted} slotBonusActive={slotBonusActive} />
       ) : (
-        <div className="text-xs text-gray-500 text-center px-2 font-medium">
+        <div className="text-xs text-black text-center px-2 font-medium">
           {slotName}
         </div>
       )}

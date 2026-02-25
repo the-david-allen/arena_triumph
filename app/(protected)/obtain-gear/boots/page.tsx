@@ -394,8 +394,8 @@ export default function BootsPage() {
 
   if (showCompletionScreen) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-200 p-6">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center space-y-4">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-page p-6">
+        <div className="max-w-md w-full game-panel-bg rounded-lg shadow-lg p-8 text-center space-y-4">
           <h2 className="text-3xl font-bold">Game Complete!</h2>
           <p className="text-lg">
             {finalSeconds === LOSS_SCORE
@@ -437,7 +437,7 @@ export default function BootsPage() {
   }
 
   return (
-    <div className="space-y-6 p-6 min-h-screen bg-gray-200">
+    <div className="space-y-6 p-6 min-h-screen bg-page">
       <div className="flex justify-between items-center">
         <Button
           onClick={() => void handlePlayGame()}
@@ -460,9 +460,9 @@ export default function BootsPage() {
           <div className="text-2xl font-bold mb-4">
             Time Elapsed: {timer} seconds
           </div>
-          <div className="bg-white p-4 rounded-lg shadow-lg flex justify-center">
+          <div className="game-panel-bg p-4 rounded-lg shadow-lg flex justify-center">
             <div
-              className="grid gap-0.5 border-2 border-gray-800"
+              className="grid gap-0.5 border-2 border-game-board-border"
               style={{
                 gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
                 gridTemplateRows: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
@@ -487,7 +487,7 @@ export default function BootsPage() {
                         <div
                           key={`${rowIndex}-${colIndex}`}
                           className={cn(
-                            "aspect-square flex items-center justify-center text-sm font-bold border border-gray-400 cursor-pointer select-none",
+                            "aspect-square flex items-center justify-center text-sm font-bold border border-game-board-border-muted cursor-pointer select-none",
                             isRevealed && "bg-white",
                             !isRevealed && "bg-slate-500 hover:bg-slate-600",
                             isGameEnding && "pointer-events-none opacity-80"

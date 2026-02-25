@@ -44,7 +44,7 @@ export default function MainPage() {
       }
 
       setUserProfile(data);
-      
+
       // Check if username equals email (needs setup)
       setNeedsSetup(data.username === data.user_email);
       setIsLoading(false);
