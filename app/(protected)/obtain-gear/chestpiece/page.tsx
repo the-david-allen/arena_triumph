@@ -389,6 +389,18 @@ export default function ChestpiecePage() {
     e.dataTransfer.dropEffect = "move";
   };
 
+  const handleTouchDrop = React.useCallback(
+    (cardData: CardData, dropKey: string | null) => {
+      if (!currentCard || cardData.card_id !== currentCard.card_id) return;
+      if (dropKey === "discard") {
+        handleDiscardCard();
+      } else if (dropKey) {
+        void handleCardDrop(dropKey as SlotName, cardData);
+      }
+    },
+    [currentCard, handleCardDrop]
+  );
+
   const handleResetGame = () => {
     setShowCompletionScreen(false);
     setRewardChestpiece(null);
@@ -507,7 +519,7 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
 
       {/* Game board */}
       {isGameActive && (
-        <div className="flex items-start gap-6">
+        <div className="flex items-start gap-6 game-interactive">
           {/* Left side: Deck, Current Card, Discard, and Score */}
           <div className="flex flex-col items-center gap-4">
             {/* Deck and Current Card side by side */}
@@ -548,7 +560,11 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
               {/* Current Card - displayed to the right of Deck */}
               {currentCard && (
                 <div className="flex flex-col items-center gap-2">
-                  <Card card={currentCard} />
+                  <Card
+                    card={currentCard}
+                    enableTouchDrag
+                    onTouchDrop={handleTouchDrop}
+                  />
                   <div className="text-xs text-white">Drag to slot or discard</div>
                 </div>
               )}
@@ -557,12 +573,13 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
             {/* Discard Pile */}
             <div className="flex flex-col items-center gap-2">
               <div
+                data-touch-drop-key="discard"
                 onDrop={handleDiscardDrop}
                 onDragOver={handleDiscardDragOver}
                 className={cn(
                   "w-24 h-32 rounded-lg border-2 border-dashed border-gray-400",
                   "flex items-center justify-center bg-gray-100/50",
-                  "transition-all hover:border-gray-600"
+                  "transition-all hover:border-gray-600 game-interactive"
                 )}
               >
                 {discardPile.length > 0 ? (
@@ -704,6 +721,7 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
             <div className="col-start-3">
               <GameSlot
                 slotName="Helm"
+                dropKey="Helm"
                 card={slots.Helm}
                 isHighlighted={highlightedCards.has(slots.Helm?.card_id || "")}
                 slotBonusActive={slotBonusActive.has(slots.Helm?.card_id || "")}
@@ -715,6 +733,7 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
             <div className="col-start-2">
               <GameSlot
                 slotName="Shoulder (L)"
+                dropKey="Shoulder-Left"
                 card={slots["Shoulder-Left"]}
                 isHighlighted={highlightedCards.has(slots["Shoulder-Left"]?.card_id || "")}
                 slotBonusActive={slotBonusActive.has(slots["Shoulder-Left"]?.card_id || "")}
@@ -724,6 +743,7 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
             <div className="col-start-4">
               <GameSlot
                 slotName="Shoulder (R)"
+                dropKey="Shoulder-Right"
                 card={slots["Shoulder-Right"]}
                 isHighlighted={highlightedCards.has(slots["Shoulder-Right"]?.card_id || "")}
                 slotBonusActive={slotBonusActive.has(slots["Shoulder-Right"]?.card_id || "")}
@@ -735,6 +755,7 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
             <div className="col-start-1">
               <GameSlot
                 slotName="Gauntlet (L)"
+                dropKey="Gauntlet-Left"
                 card={slots["Gauntlet-Left"]}
                 isHighlighted={highlightedCards.has(slots["Gauntlet-Left"]?.card_id || "")}
                 slotBonusActive={slotBonusActive.has(slots["Gauntlet-Left"]?.card_id || "")}
@@ -744,6 +765,7 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
             <div className="col-start-3">
               <GameSlot
                 slotName="Chestpiece"
+                dropKey="Chestpiece"
                 card={slots.Chestpiece}
                 isHighlighted={highlightedCards.has(slots.Chestpiece?.card_id || "")}
                 slotBonusActive={slotBonusActive.has(slots.Chestpiece?.card_id || "")}
@@ -753,6 +775,7 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
             <div className="col-start-5">
               <GameSlot
                 slotName="Gauntlet (R)"
+                dropKey="Gauntlet-Right"
                 card={slots["Gauntlet-Right"]}
                 isHighlighted={highlightedCards.has(slots["Gauntlet-Right"]?.card_id || "")}
                 slotBonusActive={slotBonusActive.has(slots["Gauntlet-Right"]?.card_id || "")}
@@ -764,6 +787,7 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
             <div className="col-start-3">
               <GameSlot
                 slotName="Belt"
+                dropKey="Belt"
                 card={slots.Belt}
                 isHighlighted={highlightedCards.has(slots.Belt?.card_id || "")}
                 slotBonusActive={slotBonusActive.has(slots.Belt?.card_id || "")}
@@ -775,6 +799,7 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
             <div className="col-start-2">
               <GameSlot
                 slotName="Legging (L)"
+                dropKey="Legging-Left"
                 card={slots["Legging-Left"]}
                 isHighlighted={highlightedCards.has(slots["Legging-Left"]?.card_id || "")}
                 slotBonusActive={slotBonusActive.has(slots["Legging-Left"]?.card_id || "")}
@@ -784,6 +809,7 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
             <div className="col-start-4">
               <GameSlot
                 slotName="Legging (R)"
+                dropKey="Legging-Right"
                 card={slots["Legging-Right"]}
                 isHighlighted={highlightedCards.has(slots["Legging-Right"]?.card_id || "")}
                 slotBonusActive={slotBonusActive.has(slots["Legging-Right"]?.card_id || "")}
@@ -795,6 +821,7 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
             <div className="col-start-2">
               <GameSlot
                 slotName="Boot (L)"
+                dropKey="Boot-Left"
                 card={slots["Boot-Left"]}
                 isHighlighted={highlightedCards.has(slots["Boot-Left"]?.card_id || "")}
                 slotBonusActive={slotBonusActive.has(slots["Boot-Left"]?.card_id || "")}
@@ -804,6 +831,7 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
             <div className="col-start-4">
               <GameSlot
                 slotName="Boot (R)"
+                dropKey="Boot-Right"
                 card={slots["Boot-Right"]}
                 isHighlighted={highlightedCards.has(slots["Boot-Right"]?.card_id || "")}
                 slotBonusActive={slotBonusActive.has(slots["Boot-Right"]?.card_id || "")}

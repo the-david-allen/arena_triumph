@@ -1,7 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import Image from "next/image";
 import { ITEM_IMAGES, ITEM_NAMES } from "@/lib/scouting-game";
+import { LONG_PRESS_MS } from "@/lib/touch-utils";
 import { cn } from "@/lib/utils";
 
 interface GridCellProps {
@@ -25,6 +27,10 @@ export function GridCell({
   onRightClick,
   disabled,
 }: GridCellProps) {
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressOccurredRef = useRef(false);
+  const touchTargetRef = useRef<number | null>(null);
+
   if (resolved) {
     return (
       <div className="flex h-full w-full items-center justify-center rounded-md border-2 border-emerald-500 bg-emerald-950/30 p-1">
@@ -41,7 +47,7 @@ export function GridCell({
   }
 
   return (
-    <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-0.5 rounded-md border border-border bg-card p-0.5">
+    <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-0.5 rounded-md border border-border bg-card p-0.5 game-interactive">
       {[0, 1, 2, 3].map((item) => (
         <button
           key={item}
@@ -49,6 +55,10 @@ export function GridCell({
           disabled={disabled || !visibleItems.has(item)}
           onClick={(e) => {
             e.preventDefault();
+            if (longPressOccurredRef.current) {
+              longPressOccurredRef.current = false;
+              return;
+            }
             if (!disabled && visibleItems.has(item)) {
               onLeftClick(row, col, item);
             }
@@ -58,6 +68,31 @@ export function GridCell({
             if (!disabled && visibleItems.has(item)) {
               onRightClick(row, col, item);
             }
+          }}
+          onTouchStart={() => {
+            if (disabled || !visibleItems.has(item)) return;
+            touchTargetRef.current = item;
+            longPressTimerRef.current = setTimeout(() => {
+              longPressTimerRef.current = null;
+              if (touchTargetRef.current === item) {
+                longPressOccurredRef.current = true;
+                onRightClick(row, col, item);
+              }
+            }, LONG_PRESS_MS);
+          }}
+          onTouchEnd={() => {
+            if (longPressTimerRef.current) {
+              clearTimeout(longPressTimerRef.current);
+              longPressTimerRef.current = null;
+            }
+            touchTargetRef.current = null;
+          }}
+          onTouchCancel={() => {
+            if (longPressTimerRef.current) {
+              clearTimeout(longPressTimerRef.current);
+              longPressTimerRef.current = null;
+            }
+            touchTargetRef.current = null;
           }}
           className={cn(
             "relative flex items-center justify-center rounded-sm transition-all",

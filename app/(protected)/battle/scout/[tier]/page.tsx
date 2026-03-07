@@ -299,7 +299,7 @@ export default function ScoutPage() {
       )}
 
       {phase === "playing" && (
-        <ScoutingGame onGameEnd={handleGameEnd} />
+        <ScoutingGame tier={tier} onGameEnd={handleGameEnd} />
       )}
 
       <ResultPopup

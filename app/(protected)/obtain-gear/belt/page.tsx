@@ -32,6 +32,39 @@ const BELT_BACKGROUND_MUSIC_URL =
 
 type CellState = null | true | false; // null = empty, true = dark green, false = X
 
+function getInitialPlayerGrid(
+  puzzle: boolean[][],
+  gridSize: number
+): CellState[][] {
+  const grid: CellState[][] = Array(gridSize)
+    .fill(null)
+    .map(() => Array(gridSize).fill(null) as CellState[]);
+  const quads: [number, number, number, number][] = [
+    [0, 5, 0, 5],
+    [0, 5, 6, 11],
+    [6, 11, 0, 5],
+    [6, 11, 6, 11],
+  ];
+  for (const [r0, r1, c0, c1] of quads) {
+    const preferred: [number, number][] = [];
+    const fallback: [number, number][] = [];
+    for (let r = r0; r <= r1; r++) {
+      for (let c = c0; c <= c1; c++) {
+        if (!puzzle[r][c]) {
+          if (r !== 0 && r !== 11 && c !== 0 && c !== 11) {
+            preferred.push([r, c]);
+          } else {
+            fallback.push([r, c]);
+          }
+        }
+      }
+    }
+    const pick = preferred.length ? preferred[0] : fallback[0];
+    if (pick) grid[pick[0]][pick[1]] = false;
+  }
+  return grid;
+}
+
 export default function BeltPage() {
   const router = useRouter();
   const [isGameActive, setIsGameActive] = React.useState(false);
@@ -176,11 +209,7 @@ export default function BeltPage() {
       setPuzzle(newPuzzle);
       setRowHints(newRowHints);
       setColumnHints(newColumnHints);
-      setPlayerGrid(
-        Array(GRID_SIZE)
-          .fill(null)
-          .map(() => Array(GRID_SIZE).fill(null))
-      );
+      setPlayerGrid(getInitialPlayerGrid(newPuzzle, GRID_SIZE));
 
       setTimer(0);
       setIsGameActive(true);
@@ -627,7 +656,7 @@ Left click on a square to make it dark green. Long-press or right-click to mark 
                 {/* Game grid */}
                 <div
                   ref={gridContainerRef}
-                  className="grid gap-1 border-2 border-game-board-border p-1"
+                  className="grid gap-1 border-2 border-game-board-border p-1 game-interactive"
                   style={{
                     gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`,
                     gridTemplateRows: `repeat(${GRID_SIZE}, 1fr)`,

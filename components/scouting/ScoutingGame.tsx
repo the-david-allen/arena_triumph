@@ -5,9 +5,23 @@ import { generateScoutingPuzzle, type ScoutingPuzzle } from "@/lib/scouting-game
 import { MainGrid, type CellState } from "./MainGrid";
 import { CluesPanel } from "./CluesPanel";
 
-const TIMER_SECONDS = 300;
+function getTimerSecondsForTier(tier: number): number {
+  switch (tier) {
+    case 1:
+      return 600; // 10 minutes
+    case 2:
+      return 300; // 5 minutes
+    case 3:
+      return 240; // 4 minutes
+    case 4:
+      return 180; // 3 minutes
+    default:
+      return 300;
+  }
+}
 
 interface ScoutingGameProps {
+  tier: number;
   onGameEnd: (success: boolean) => void;
 }
 
@@ -21,12 +35,13 @@ function buildInitialCells(puzzle: ScoutingPuzzle): CellState[][] {
   );
 }
 
-export function ScoutingGame({ onGameEnd }: ScoutingGameProps) {
+export function ScoutingGame({ tier, onGameEnd }: ScoutingGameProps) {
+  const timerSeconds = getTimerSecondsForTier(tier);
   const puzzle = useMemo(() => generateScoutingPuzzle(), []);
   const [cells, setCells] = useState<CellState[][]>(() =>
     buildInitialCells(puzzle)
   );
-  const [timeLeft, setTimeLeft] = useState(TIMER_SECONDS);
+  const [timeLeft, setTimeLeft] = useState(timerSeconds);
   const gameOverRef = useRef(false);
 
   // Timer
@@ -153,6 +168,7 @@ export function ScoutingGame({ onGameEnd }: ScoutingGameProps) {
           />
           <p className="text-center text-xs text-muted-foreground">
             Left click to select the option when you know it. Right click to eliminate the option.
+            <span className="block sm:hidden"> On mobile: Tap to select, long-press to eliminate.</span>
           </p>
         </div>
 

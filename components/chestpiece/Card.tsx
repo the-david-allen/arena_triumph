@@ -3,6 +3,19 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+const DRAG_THRESHOLD = 5;
+
+function findTouchDropKey(clientX: number, clientY: number): string | null {
+  const el = document.elementFromPoint(clientX, clientY);
+  let cur: Element | null = el;
+  while (cur) {
+    const key = cur.getAttribute("data-touch-drop-key");
+    if (key) return key;
+    cur = cur.parentElement;
+  }
+  return null;
+}
+
 export interface CardData {
   card_id: string;
   color: string;
@@ -19,10 +32,14 @@ interface CardProps {
   slotBonusActive?: boolean;
   isDragging?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
+  /** When true, enables touch-based drag for Android (HTML5 DnD does not work on mobile) */
+  enableTouchDrag?: boolean;
+  /** Called when touch drag ends; dropKey is from data-touch-drop-key of the element under the touch */
+  onTouchDrop?: (cardData: CardData, dropKey: string | null) => void;
   className?: string;
 }
 
-export function Card({ card, isHighlighted = false, slotBonusActive = false, isDragging = false, onDragStart, className }: CardProps) {
+export function Card({ card, isHighlighted = false, slotBonusActive = false, isDragging = false, onDragStart, enableTouchDrag = false, onTouchDrop, className }: CardProps) {
   // #region agent log
   React.useEffect(() => {
     console.log('[DEBUG] Card rendered:', { 
@@ -37,6 +54,13 @@ export function Card({ card, isHighlighted = false, slotBonusActive = false, isD
   }, [card]);
   // #endregion
 
+  const touchDragRef = React.useRef<{
+    touchId: number;
+    startX: number;
+    startY: number;
+    didDrag: boolean;
+  } | null>(null);
+
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData("application/json", JSON.stringify(card));
     e.dataTransfer.effectAllowed = "move";
@@ -44,6 +68,47 @@ export function Card({ card, isHighlighted = false, slotBonusActive = false, isD
       onDragStart(e);
     }
   };
+
+  const handleTouchStart = React.useCallback(
+    (e: React.TouchEvent) => {
+      if (!enableTouchDrag || !onTouchDrop || e.touches.length === 0) return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      touchDragRef.current = {
+        touchId: touch.identifier,
+        startX: touch.clientX,
+        startY: touch.clientY,
+        didDrag: false,
+      };
+      const onMove = (ev: TouchEvent) => {
+        if (ev.touches.length === 0 || ev.touches[0].identifier !== touchDragRef.current?.touchId) return;
+        ev.preventDefault();
+        const dx = Math.abs(ev.touches[0].clientX - touchDragRef.current.startX);
+        const dy = Math.abs(ev.touches[0].clientY - touchDragRef.current.startY);
+        if (dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD) {
+          touchDragRef.current.didDrag = true;
+        }
+      };
+      const onEnd = (ev: TouchEvent) => {
+        const ct = ev.changedTouches[0];
+        if (!ct || ct.identifier !== touchDragRef.current?.touchId) return;
+        ev.preventDefault();
+        const state = touchDragRef.current;
+        touchDragRef.current = null;
+        document.removeEventListener("touchmove", onMove, { capture: true });
+        document.removeEventListener("touchend", onEnd, { capture: true });
+        document.removeEventListener("touchcancel", onEnd, { capture: true });
+        if (state?.didDrag) {
+          const dropKey = findTouchDropKey(ct.clientX, ct.clientY);
+          onTouchDrop(card, dropKey);
+        }
+      };
+      document.addEventListener("touchmove", onMove, { passive: false, capture: true });
+      document.addEventListener("touchend", onEnd, { capture: true });
+      document.addEventListener("touchcancel", onEnd, { capture: true });
+    },
+    [enableTouchDrag, onTouchDrop, card]
+  );
 
   // Ensure color is a valid CSS color value
   // Handle various color formats: hex (#fff, #ffffff), rgb, named colors
@@ -92,8 +157,9 @@ export function Card({ card, isHighlighted = false, slotBonusActive = false, isD
     <div
       draggable
       onDragStart={handleDragStart}
+      onTouchStart={enableTouchDrag ? handleTouchStart : undefined}
       className={cn(
-        "relative w-24 h-32 rounded-lg border-2 border-gray-800 shadow-lg cursor-move transition-all",
+        "relative w-24 h-32 rounded-lg border-2 border-gray-800 shadow-lg cursor-move transition-all game-interactive",
         "flex flex-col items-center justify-between p-2 font-bold",
         textColor,
         isHighlighted && "ring-4 ring-yellow-400 ring-opacity-75 shadow-xl",

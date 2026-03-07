@@ -86,6 +86,11 @@
   background-color: var(--game-board-panel-bg);
 }
 
+/* Android: remove 300ms tap delay, reduce double-tap zoom on interactive game regions */
+.game-interactive {
+  touch-action: manipulation;
+}
+
 @layer base {
   * {
     @apply border-border;

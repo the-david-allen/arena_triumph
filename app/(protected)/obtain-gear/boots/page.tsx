@@ -460,7 +460,7 @@ export default function BootsPage() {
           <div className="text-2xl font-bold mb-4">
             Time Elapsed: {timer} seconds
           </div>
-          <div className="game-panel-bg p-4 rounded-lg shadow-lg flex justify-center">
+          <div className="game-panel-bg p-4 rounded-lg shadow-lg flex justify-center game-interactive">
             <div
               className="grid gap-0.5 border-2 border-game-board-border"
               style={{

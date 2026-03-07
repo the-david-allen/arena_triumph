@@ -18,6 +18,11 @@ import {
   type Contestant,
   type LevelProgress,
 } from "@/lib/inspect";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 interface EquipmentSlotProps {
   item: InventoryItem | null;
@@ -39,20 +44,72 @@ function EquipmentSlot({
   const isHorizontal = layout === "horizontal";
   const imageOnRight = imagePosition === "right";
 
-  const imageElement = (
+  const imageElement = item?.details?.image_url ? (
+    <HoverCard>
+      <HoverCardTrigger asChild>
+        <div className="flex h-14 w-14 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg border bg-muted/50">
+          <Image
+            src={item.details.image_url}
+            alt={item.details.name}
+            width={56}
+            height={56}
+            className="h-full w-full object-contain"
+            unoptimized
+          />
+        </div>
+      </HoverCardTrigger>
+      <HoverCardContent className="w-auto p-3" side="right" align="center">
+        <div className="flex flex-col items-center gap-2">
+          <p className="text-sm font-semibold">{item.details.name}</p>
+          <Image
+            src={item.details.image_url}
+            alt={item.details.name}
+            width={128}
+            height={128}
+            className="rounded-lg object-contain"
+            unoptimized
+          />
+          <p className="text-sm font-medium">Power: {item.details.strength}</p>
+          {(item.details.primary_affinity ||
+            item.details.secondary_affinity) && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Affinities:</span>
+              {item.details.primary_affinity && (
+                <span className="flex items-center gap-1">
+                  <Image
+                    src={getAffinityIconUrl(item.details.primary_affinity)}
+                    alt={item.details.primary_affinity}
+                    width={24}
+                    height={24}
+                    className="rounded object-contain"
+                    unoptimized
+                  />
+                  <span className="text-xs">{item.details.primary_affinity}</span>
+                </span>
+              )}
+              {item.details.secondary_affinity && (
+                <span className="flex items-center gap-1">
+                  <Image
+                    src={getAffinityIconUrl(item.details.secondary_affinity)}
+                    alt={item.details.secondary_affinity}
+                    width={24}
+                    height={24}
+                    className="rounded object-contain"
+                    unoptimized
+                  />
+                  <span className="text-xs">
+                    {item.details.secondary_affinity}
+                  </span>
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </HoverCardContent>
+    </HoverCard>
+  ) : (
     <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted/50">
-      {item?.details?.image_url ? (
-        <Image
-          src={item.details.image_url}
-          alt={item.details.name}
-          width={56}
-          height={56}
-          className="h-full w-full object-contain"
-          unoptimized
-        />
-      ) : (
-        <span className="text-[10px] text-muted-foreground">{slotName}</span>
-      )}
+      <span className="text-[10px] text-muted-foreground">{slotName}</span>
     </div>
   );
 

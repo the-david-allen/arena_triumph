@@ -385,7 +385,7 @@ Try to guess in as few rounds as possible.  Good luck!`;
 
       {/* Game board */}
       {isGameActive && (
-        <div className="space-y-6">
+        <div className="space-y-6 game-interactive">
           {/* Affinities header */}
           <div className="flex items-center gap-4 bg-gray-500 rounded-lg shadow-md p-4">
             <span className="font-semibold text-lg text-white">Affinities:</span>

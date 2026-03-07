@@ -6,6 +6,8 @@ import { Card, CardData } from "./Card";
 
 interface GameSlotProps {
   slotName: string;
+  /** Key used for touch-drop resolution; must match the slot key in handleCardDrop */
+  dropKey?: string;
   card: CardData | null;
   isHighlighted?: boolean;
   slotBonusActive?: boolean;
@@ -19,6 +21,7 @@ interface GameSlotProps {
 
 export function GameSlot({
   slotName,
+  dropKey,
   card,
   isHighlighted = false,
   slotBonusActive = false,
@@ -67,11 +70,12 @@ export function GameSlot({
 
   return (
     <div
+      {...(dropKey ? { "data-touch-drop-key": dropKey } : {})}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={cn(
-        "relative min-w-[100px] min-h-[140px] rounded-lg border-2 border-dashed border-gray-400",
+        "relative min-w-[100px] min-h-[140px] rounded-lg border-2 border-dashed border-gray-400 game-interactive",
         "flex items-center justify-center bg-gray-100/50 transition-all",
         isDragOver && !card && "border-blue-500 bg-blue-100/50 scale-105",
         card && "border-solid border-gray-600 bg-transparent",

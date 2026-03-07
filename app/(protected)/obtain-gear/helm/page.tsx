@@ -487,7 +487,7 @@ Also, each piece of equipment you use (meaning you have 1 or more cells filled i
       {isGameActive && (
         <div className="space-y-6">
           {/* Scores, dice area, and controls — same panel background as grid */}
-          <div className="border-4 border-white/40 rounded-lg p-4 shadow-lg game-panel-bg space-y-6 text-white">
+          <div className="border-4 border-white/40 rounded-lg p-4 shadow-lg game-panel-bg space-y-6 text-white game-interactive">
             {/* Scores and Strikes */}
             <div className="flex gap-8 justify-center items-center">
               <div className="text-center">

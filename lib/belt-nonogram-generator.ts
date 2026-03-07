@@ -172,6 +172,12 @@ function clueFromBits(bits: number): number[] {
   return clue;
 }
 
+/** Returns the longest contiguous run of 1s in a 12-bit pattern. */
+function maxRunLength(bits: number): number {
+  const clue = clueFromBits(bits & FULL_MASK);
+  return clue.length ? Math.max(...clue) : 0;
+}
+
 function clueKey(clue: number[]): string {
   return clue.length ? clue.join(",") : "";
 }
@@ -752,6 +758,14 @@ function generateDeterministicMediumHard(
       }
     }
     if (colRunsBad) continue;
+
+    let maxRowRun = 0;
+    let maxColRun = 0;
+    for (let r = 0; r < N; r++)
+      maxRowRun = Math.max(maxRowRun, maxRunLength(rowBits[r]));
+    for (let c = 0; c < N; c++)
+      maxColRun = Math.max(maxColRun, maxRunLength(colBits[c]));
+    if (maxRowRun < 8 || maxColRun < 8) continue;
 
     const { rowClues, colClues } = cluesFromRowBits(rowBits);
 

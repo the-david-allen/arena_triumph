@@ -206,6 +206,16 @@ export default function WeaponPage() {
     setNoPlacementMessage("");
   };
 
+  // Handle moving die from rolled area to separated area (click to move)
+  const handleMoveRolledDieToSeparated = (index: number) => {
+    if (separatedDice.length >= 2) return;
+    const dieValue = rolledDice[index];
+    setSeparatedDice((prev) => [...prev, dieValue]);
+    setRolledDice((prev) => prev.filter((_, i) => i !== index));
+    setHighlightedDiceArea(null);
+    setNoPlacementMessage("");
+  };
+
   // Helper function to check if column has any highlighted cells
   const hasColumnHighlighted = (columnIndex: number): boolean => {
     if (columnIndex < 0 || columnIndex >= COLUMNS.length) return false;
@@ -735,7 +745,7 @@ export default function WeaponPage() {
           </div>
 
           {/* Buttons and Dice areas */}
-          <div className="game-panel-bg p-4 rounded-lg shadow-lg">
+          <div className="game-panel-bg p-4 rounded-lg shadow-lg game-interactive">
             <div className="flex flex-col md:flex-row gap-4 justify-center items-start">
               {/* Buttons - fixed width so location stays consistent */}
               <div className="flex flex-col gap-2 items-center justify-center w-[140px] min-w-[140px] shrink-0">
@@ -786,9 +796,13 @@ export default function WeaponPage() {
                       key={index}
                       draggable={separatedDice.length < 2}
                       onDragStart={(e) => handleDiceDragStart(index, e)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (separatedDice.length < 2) handleMoveRolledDieToSeparated(index);
+                      }}
                       className={cn(
                         "flex items-center justify-center overflow-hidden",
-                        separatedDice.length < 2 && "cursor-move"
+                        separatedDice.length < 2 && "cursor-move cursor-pointer"
                       )}
                     >
                       <Image
@@ -825,7 +839,10 @@ export default function WeaponPage() {
                   {separatedDice.map((die, index) => (
                     <div
                       key={index}
-                      onClick={() => handleRemoveSeparatedDie(index)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveSeparatedDie(index);
+                      }}
                       className="flex items-center justify-center overflow-hidden cursor-pointer"
                     >
                       <Image
@@ -849,7 +866,7 @@ export default function WeaponPage() {
           </div>
 
           {/* Grid + checklist: grid centered in left half, gear list centered in right half */}
-          <div className="game-panel-bg p-4 rounded-lg shadow-lg flex min-h-[400px] overflow-x-auto">
+          <div className="game-panel-bg p-4 rounded-lg shadow-lg flex min-h-[400px] overflow-x-auto game-interactive">
             <div className="w-1/2 flex justify-center items-center min-w-0">
               <div className="flex gap-2 justify-center min-w-max">
               {COLUMNS.map((columnValue, colIndex) => {

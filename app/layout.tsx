@@ -21,6 +21,11 @@ export const metadata: Metadata = {
   description: "A responsive web application for the Arena Triumph game",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function RootLayout({
   children,
 }: {

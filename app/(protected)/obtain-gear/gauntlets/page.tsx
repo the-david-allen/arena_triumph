@@ -915,7 +915,7 @@ export default function GauntletsPage() {
       {isGameActive ? (
         <div
           ref={containerRef}
-          className="flex justify-center items-center w-full"
+          className="flex justify-center items-center w-full game-interactive"
           style={{ height: "calc(100vh - 140px)" }}
         >
           <canvas

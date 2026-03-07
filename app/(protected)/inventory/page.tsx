@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { AffinityStrengthsDialog } from "@/components/AffinityStrengthsDialog";
 import {
   GEAR_SLOTS,
   getAffinityIconUrl,
@@ -43,6 +44,7 @@ export default function InventoryPage() {
     xpVal: number;
   } | null>(null);
   const [showRarityLookup, setShowRarityLookup] = React.useState(false);
+  const [showAffinityReference, setShowAffinityReference] = React.useState(false);
 
   const userIdRef = React.useRef<string | null>(null);
 
@@ -251,12 +253,20 @@ export default function InventoryPage() {
       <div>
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-foreground">Manage Inventory</h1>
-          <Button
-            variant="outline"
-            onClick={() => setShowRarityLookup(true)}
-          >
-            Rarity Lookup
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowAffinityReference(true)}
+            >
+              Affinity Reference
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowRarityLookup(true)}
+            >
+              Rarity Lookup
+            </Button>
+          </div>
         </div>
         <p className="mt-2 text-muted-foreground">
           View, equip, and remove items from your inventory.
@@ -467,6 +477,11 @@ export default function InventoryPage() {
           </div>
         </div>
       </div>
+
+      <AffinityStrengthsDialog
+        open={showAffinityReference}
+        onOpenChange={setShowAffinityReference}
+      />
 
       {/* Rarity Lookup dialog */}
       <Dialog open={showRarityLookup} onOpenChange={setShowRarityLookup}>
