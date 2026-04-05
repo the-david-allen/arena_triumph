@@ -19,7 +19,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { TutorialButton } from "@/components/tutorial/TutorialButton";
 import { useTutorial } from "@/lib/tutorial/use-tutorial";
-import { useGearPageTutorialIntent } from "@/lib/tutorial/use-gear-page-tutorial-intent";
+import { GearPageTutorialIntent } from "@/components/tutorial/GearPageTutorialIntent";
 
 const BOOTS_BACKGROUND_MUSIC_URL =
   "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/sounds/boots_background.mp3";
@@ -117,7 +117,6 @@ function floodReveal(
 
 export default function BootsPage() {
   const { startTutorial } = useTutorial();
-  useGearPageTutorialIntent("boots", startTutorial);
   const [isGameActive, setIsGameActive] = React.useState(false);
   const [mineMap, setMineMap] = React.useState<boolean[][] | null>(null);
   const [adjacentCounts, setAdjacentCounts] = React.useState<number[][] | null>(null);
@@ -389,7 +388,9 @@ export default function BootsPage() {
 
   if (showCompletionScreen) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-page p-6">
+      <>
+        <GearPageTutorialIntent tutorialId="boots" startTutorial={startTutorial} />
+        <div className="flex flex-col items-center justify-center min-h-screen bg-page p-6">
         <div className="max-w-md w-full game-panel-bg rounded-lg shadow-lg p-8 text-center space-y-4">
           <h2 className="text-3xl font-bold">Game Complete!</h2>
           <p className="text-lg">
@@ -428,11 +429,14 @@ export default function BootsPage() {
           </Button>
         </div>
       </div>
+      </>
     );
   }
 
   return (
-    <div className="space-y-6 p-6 min-h-screen bg-page">
+    <>
+      <GearPageTutorialIntent tutorialId="boots" startTutorial={startTutorial} />
+      <div className="space-y-6 p-6 min-h-screen bg-page">
       <div className="flex justify-between items-center">
         <Button
           onClick={() => void handlePlayGame()}
@@ -533,5 +537,6 @@ export default function BootsPage() {
       )}
 
     </div>
+    </>
   );
 }

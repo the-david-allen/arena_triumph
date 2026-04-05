@@ -19,7 +19,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { TutorialButton } from "@/components/tutorial/TutorialButton";
 import { useTutorial } from "@/lib/tutorial/use-tutorial";
-import { useGearPageTutorialIntent } from "@/lib/tutorial/use-gear-page-tutorial-intent";
+import { GearPageTutorialIntent } from "@/components/tutorial/GearPageTutorialIntent";
 
 const SLOT_ORDER = ["Helm", "Chest", "Gauntlets", "Leggings", "Boots", "Weapon"] as const;
 type SlotName = typeof SLOT_ORDER[number];
@@ -57,7 +57,6 @@ interface DiceRoll {
 export default function HelmPage() {
   const router = useRouter();
   const { startTutorial } = useTutorial();
-  useGearPageTutorialIntent("helm", startTutorial);
   const [isGameActive, setIsGameActive] = React.useState(false);
   const [strength, setStrength] = React.useState(0);
   const [encumberance, setEncumberance] = React.useState(0);
@@ -421,7 +420,9 @@ export default function HelmPage() {
   // Show completion screen
   if (showCompletionScreen) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-page p-6">
+      <>
+        <GearPageTutorialIntent tutorialId="helm" startTutorial={startTutorial} />
+        <div className="flex flex-col items-center justify-center min-h-screen bg-page p-6">
         <div className="max-w-md w-full game-panel-bg rounded-lg shadow-lg p-8 text-center space-y-4">
           <h2 className="text-3xl font-bold">Game Complete!</h2>
           <p className="text-lg">Congratulations! You have completed the game.</p>
@@ -454,11 +455,14 @@ export default function HelmPage() {
           </Button>
         </div>
       </div>
+      </>
     );
   }
 
   return (
-    <div className="space-y-6 p-6 min-h-screen bg-page">
+    <>
+      <GearPageTutorialIntent tutorialId="helm" startTutorial={startTutorial} />
+      <div className="space-y-6 p-6 min-h-screen bg-page">
       {/* Header with buttons */}
       <div className="flex justify-between items-center">
         <Button
@@ -649,5 +653,6 @@ export default function HelmPage() {
       )}
 
     </div>
+    </>
   );
 }

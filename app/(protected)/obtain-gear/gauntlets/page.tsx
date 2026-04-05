@@ -18,7 +18,7 @@ import { BACKGROUND_MUSIC_VOLUME } from "@/lib/sounds";
 import { useRouter } from "next/navigation";
 import { TutorialButton } from "@/components/tutorial/TutorialButton";
 import { useTutorial } from "@/lib/tutorial/use-tutorial";
-import { useGearPageTutorialIntent } from "@/lib/tutorial/use-gear-page-tutorial-intent";
+import { GearPageTutorialIntent } from "@/components/tutorial/GearPageTutorialIntent";
 
 const GAUNTLETS_BACKGROUND_MUSIC_URL =
   "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/sounds/gauntlets_background.mp3";
@@ -543,7 +543,6 @@ function loadImages(): Promise<LoadedImages> {
 /* ═══════════════════ React Component ═════════════════════════════ */
 export default function GauntletsPage() {
   const { startTutorial } = useTutorial();
-  useGearPageTutorialIntent("gauntlets", startTutorial);
   const [showCompletionScreen, setShowCompletionScreen] = React.useState(false);
   const [finalSeconds, setFinalSeconds] = React.useState(0);
   const [rewardGauntlets, setRewardGauntlets] = React.useState<GauntletsReward | null>(null);
@@ -849,7 +848,9 @@ export default function GauntletsPage() {
   /* ─────────── Completion screen ─────────── */
   if (showCompletionScreen) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-page p-6">
+      <>
+        <GearPageTutorialIntent tutorialId="gauntlets" startTutorial={startTutorial} />
+        <div className="flex flex-col items-center justify-center min-h-screen bg-page p-6">
         <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center space-y-4">
           <h2 className="text-3xl font-bold">Game Complete!</h2>
           <p className="text-lg">You have completed the game.</p>
@@ -882,12 +883,15 @@ export default function GauntletsPage() {
           </Button>
         </div>
       </div>
+      </>
     );
   }
 
   /* ─────────── Main page ─────────── */
   return (
-    <div className="space-y-6 p-6 min-h-screen bg-page">
+    <>
+      <GearPageTutorialIntent tutorialId="gauntlets" startTutorial={startTutorial} />
+      <div className="space-y-6 p-6 min-h-screen bg-page">
       <div className="flex justify-between items-center">
         <Button
           onClick={() => void handlePlayGame()}
@@ -923,5 +927,6 @@ export default function GauntletsPage() {
       )}
 
     </div>
+    </>
   );
 }

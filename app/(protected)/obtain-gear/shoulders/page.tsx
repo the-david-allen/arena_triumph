@@ -21,8 +21,6 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { TutorialButton } from "@/components/tutorial/TutorialButton";
-import { useTutorial } from "@/lib/tutorial/use-tutorial";
-import { useGearPageTutorialIntent } from "@/lib/tutorial/use-gear-page-tutorial-intent";
 
 const COLUMNS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 const CDN_BASE_URL = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/slots";

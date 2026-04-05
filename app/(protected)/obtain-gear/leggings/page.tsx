@@ -22,7 +22,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { TutorialButton } from "@/components/tutorial/TutorialButton";
 import { useTutorial } from "@/lib/tutorial/use-tutorial";
-import { useGearPageTutorialIntent } from "@/lib/tutorial/use-gear-page-tutorial-intent";
+import { GearPageTutorialIntent } from "@/components/tutorial/GearPageTutorialIntent";
 
 const CDN_BASE_URL = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/affinities";
 
@@ -41,7 +41,6 @@ interface RoundData {
 export default function LeggingsPage() {
   const router = useRouter();
   const { startTutorial } = useTutorial();
-  useGearPageTutorialIntent("leggings", startTutorial);
   const [isGameActive, setIsGameActive] = React.useState(false);
   const [answer, setAnswer] = React.useState<Affinity[]>([]);
   const [rounds, setRounds] = React.useState<RoundData[]>([]);
@@ -319,7 +318,9 @@ export default function LeggingsPage() {
   // Show completion screen
   if (showCompletionScreen) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-page p-6">
+      <>
+        <GearPageTutorialIntent tutorialId="leggings" startTutorial={startTutorial} />
+        <div className="flex flex-col items-center justify-center min-h-screen bg-page p-6">
         <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center space-y-4">
           <h2 className="text-3xl font-bold">Game Complete!</h2>
           <p className="text-lg">Congratulations! You have completed the game.</p>
@@ -352,11 +353,14 @@ export default function LeggingsPage() {
           </Button>
         </div>
       </div>
+      </>
     );
   }
 
   return (
-    <div className="space-y-6 p-6 min-h-screen bg-page">
+    <>
+      <GearPageTutorialIntent tutorialId="leggings" startTutorial={startTutorial} />
+      <div className="space-y-6 p-6 min-h-screen bg-page">
       {/* Header with buttons */}
       <div className="flex justify-between items-center">
         <Button
@@ -558,5 +562,6 @@ export default function LeggingsPage() {
         onOpenChange={setShowStrengths}
       />
     </div>
+    </>
   );
 }

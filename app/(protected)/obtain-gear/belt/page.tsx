@@ -21,7 +21,7 @@ import { useRouter } from "next/navigation";
 import { TutorialButton } from "@/components/tutorial/TutorialButton";
 import { BeltTutorialView } from "@/components/belt/BeltTutorialView";
 import { useTutorial } from "@/lib/tutorial/use-tutorial";
-import { useGearPageTutorialIntent } from "@/lib/tutorial/use-gear-page-tutorial-intent";
+import { GearPageTutorialIntent } from "@/components/tutorial/GearPageTutorialIntent";
 
 const GRID_SIZE = 12;
 
@@ -75,7 +75,6 @@ export default function BeltPage() {
     goBackStep,
     skipTutorial,
   } = useTutorial();
-  useGearPageTutorialIntent("belt", startTutorial);
   const [isGameActive, setIsGameActive] = React.useState(false);
   const [puzzle, setPuzzle] = React.useState<boolean[][] | null>(null);
   const [playerGrid, setPlayerGrid] = React.useState<CellState[][]>(
@@ -494,20 +493,25 @@ export default function BeltPage() {
 
   if (isActive && activeTutorialId === "belt" && currentStep) {
     return (
-      <BeltTutorialView
-        currentStep={currentStep}
-        stepIndex={currentStepIndex}
-        emit={emit}
-        goBackStep={goBackStep}
-        skipTutorial={skipTutorial}
-      />
+      <>
+        <GearPageTutorialIntent tutorialId="belt" startTutorial={startTutorial} />
+        <BeltTutorialView
+          currentStep={currentStep}
+          stepIndex={currentStepIndex}
+          emit={emit}
+          goBackStep={goBackStep}
+          skipTutorial={skipTutorial}
+        />
+      </>
     );
   }
 
   // Show completion screen
   if (showCompletionScreen) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-page p-6">
+      <>
+        <GearPageTutorialIntent tutorialId="belt" startTutorial={startTutorial} />
+        <div className="flex flex-col items-center justify-center min-h-screen bg-page p-6">
         <div className="max-w-md w-full game-panel-bg rounded-lg shadow-lg p-8 text-center space-y-4">
           <h2 className="text-3xl font-bold">Game Complete!</h2>
           <p className="text-lg">Congratulations! You have completed the puzzle.</p>
@@ -540,6 +544,7 @@ export default function BeltPage() {
           </Button>
         </div>
       </div>
+      </>
     );
   }
 
@@ -548,7 +553,9 @@ export default function BeltPage() {
   const maxColHintLength = columnHints.length > 0 ? Math.max(...columnHints.map((h) => h.length || 0), 0) : 0;
 
   return (
-    <div className="space-y-6 p-6 min-h-screen bg-page">
+    <>
+      <GearPageTutorialIntent tutorialId="belt" startTutorial={startTutorial} />
+      <div className="space-y-6 p-6 min-h-screen bg-page">
       {/* Header with buttons */}
       <div className="flex justify-between items-center">
         <Button
@@ -779,5 +786,6 @@ export default function BeltPage() {
       )}
 
     </div>
+    </>
   );
 }

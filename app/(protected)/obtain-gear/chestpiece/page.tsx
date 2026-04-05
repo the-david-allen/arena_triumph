@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { TutorialButton } from "@/components/tutorial/TutorialButton";
 import { useTutorial } from "@/lib/tutorial/use-tutorial";
-import { useGearPageTutorialIntent } from "@/lib/tutorial/use-gear-page-tutorial-intent";
+import { GearPageTutorialIntent } from "@/components/tutorial/GearPageTutorialIntent";
 
 type SlotName =
   | "Helm"
@@ -53,7 +53,6 @@ const HORIZONTAL_LINES: Record<number, SlotName[]> = {
 export default function ChestpiecePage() {
   const router = useRouter();
   const { startTutorial } = useTutorial();
-  useGearPageTutorialIntent("chestpiece", startTutorial);
   const [deck, setDeck] = React.useState<CardData[]>([]);
   const [currentCard, setCurrentCard] = React.useState<CardData | null>(null);
   const [slots, setSlots] = React.useState<SlotState>({
@@ -399,7 +398,9 @@ export default function ChestpiecePage() {
   // Show completion screen if flag is set
   if (showCompletionScreen) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-page p-6">
+      <>
+        <GearPageTutorialIntent tutorialId="chestpiece" startTutorial={startTutorial} />
+        <div className="flex flex-col items-center justify-center min-h-screen bg-page p-6">
         <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center space-y-4">
           <h2 className="text-3xl font-bold">Game Complete!</h2>
           <p className="text-lg">Congratulations! You have completed the game.</p>
@@ -427,11 +428,14 @@ export default function ChestpiecePage() {
           <Button onClick={() => router.push("/obtain-gear")} className="mt-4">Ok</Button>
         </div>
       </div>
+      </>
     );
   }
 
   return (
-    <div className="space-y-6 p-6 min-h-screen bg-page">
+    <>
+      <GearPageTutorialIntent tutorialId="chestpiece" startTutorial={startTutorial} />
+      <div className="space-y-6 p-6 min-h-screen bg-page">
       {/* Header with buttons */}
       <div className="flex justify-between items-center">
         <Button
@@ -787,5 +791,6 @@ export default function ChestpiecePage() {
       )}
 
     </div>
+    </>
   );
 }

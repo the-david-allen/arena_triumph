@@ -22,8 +22,6 @@ import {
 } from "@/lib/shoulders-scoring";
 import { useRouter } from "next/navigation";
 import { TutorialButton } from "@/components/tutorial/TutorialButton";
-import { useTutorial } from "@/lib/tutorial/use-tutorial";
-import { useGearPageTutorialIntent } from "@/lib/tutorial/use-gear-page-tutorial-intent";
 
 const INITIAL_TURNS = 8;
 const TOTAL_DICE = 6;
