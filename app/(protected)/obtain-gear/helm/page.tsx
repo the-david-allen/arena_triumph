@@ -3,13 +3,6 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   updatePlayCount,
   getCurrentUserId,
   updateTopScores,
@@ -18,11 +11,15 @@ import {
   addToInventory,
 } from "@/lib/helm-game";
 import { checkUserHasItem, addXpToUser, RARITY_XP } from "@/lib/inventory";
+import { ENDGAME_REWARD_DELAY_MS } from "@/lib/game-constants";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
 import { playDiceRollSound } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { TutorialButton } from "@/components/tutorial/TutorialButton";
+import { useTutorial } from "@/lib/tutorial/use-tutorial";
+import { useGearPageTutorialIntent } from "@/lib/tutorial/use-gear-page-tutorial-intent";
 
 const SLOT_ORDER = ["Helm", "Chest", "Gauntlets", "Leggings", "Boots", "Weapon"] as const;
 type SlotName = typeof SLOT_ORDER[number];
@@ -59,6 +56,8 @@ interface DiceRoll {
 
 export default function HelmPage() {
   const router = useRouter();
+  const { startTutorial } = useTutorial();
+  useGearPageTutorialIntent("helm", startTutorial);
   const [isGameActive, setIsGameActive] = React.useState(false);
   const [strength, setStrength] = React.useState(0);
   const [encumberance, setEncumberance] = React.useState(0);
@@ -73,7 +72,6 @@ export default function HelmPage() {
   const [diceRotations, setDiceRotations] = React.useState<[number, number, number, number]>([0, 0, 0, 0]);
   const [highlightedColumns, setHighlightedColumns] = React.useState<Set<number>>(new Set());
   const [greyColumns, setGreyColumns] = React.useState<Set<number>>(new Set());
-  const [showRules, setShowRules] = React.useState(false);
   const [showCompletionScreen, setShowCompletionScreen] = React.useState(false);
   const [rewardHelm, setRewardHelm] = React.useState<{ id: string; name: string; image_url: string | null; rarity: string } | null>(null);
   const [rewardXp, setRewardXp] = React.useState<number | null>(null);
@@ -338,7 +336,7 @@ export default function HelmPage() {
     setFinalScore(score);
 
     // Wait 2 seconds
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await new Promise((resolve) => setTimeout(resolve, ENDGAME_REWARD_DELAY_MS));
 
     try {
       const userId = await getCurrentUserId();
@@ -412,10 +410,6 @@ export default function HelmPage() {
     return selectedValue > highestValue;
   };
 
-  const rulesText = `Roll 4 dice:  2 standard and 2 that have faces corresponding to the equipment slots for the grid columns.  Each roll, you select 1 of each type of die (1 numerical, 1 slot) and place the numerical value into the lowest open cell in that slot column.  But watch out, you may only place values that are at least as large as the highest value already in the column.  If you find yourself without a good move (or without any move), push the Strike button to end you turn and prepare to roll again.  However, you only get 10 Strikes before the game ends.
-
-Also, each piece of equipment you use (meaning you have 1 or more cells filled in that column) weighs you down with some Encumberance.`;
-
   // Play tada sound when showing item reward
   React.useEffect(() => {
     if (showCompletionScreen && rewardHelm) {
@@ -478,9 +472,7 @@ Also, each piece of equipment you use (meaning you have 1 or more cells filled i
             ? "No plays remaining today"
             : "Play Game"}
         </Button>
-        <Button variant="outline" onClick={() => setShowRules(true)}>
-          Rules
-        </Button>
+        <TutorialButton tutorialId="helm" variant="outline" />
       </div>
 
       {/* Game board */}
@@ -656,17 +648,6 @@ Also, each piece of equipment you use (meaning you have 1 or more cells filled i
         </div>
       )}
 
-      {/* Rules Dialog */}
-      <Dialog open={showRules} onOpenChange={setShowRules}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Game Rules</DialogTitle>
-            <DialogDescription className="whitespace-pre-line">
-              {rulesText}
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

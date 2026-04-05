@@ -76,7 +76,7 @@ export function NavigationBar() {
     confirmInput.trim() === CONFIRM_TEXT && !isDeleting;
 
   return (
-    <nav className="border-b shadow-sm bg-card">
+    <nav className="border-b shadow-sm bg-card" data-tutorial-target="nav-bar">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-28 items-center justify-between">
           <div className="flex items-center">

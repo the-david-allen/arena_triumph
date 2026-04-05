@@ -5,12 +5,17 @@ import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { AffinityStrengthsDialog } from "@/components/AffinityStrengthsDialog";
 import { cn } from "@/lib/cn";
+import { useTutorial } from "@/lib/tutorial/use-tutorial";
+import { useFirstLandingTutorial } from "@/lib/tutorial/use-first-landing-tutorial";
 
 const GAME_LOOP_IMAGE =
   "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/bling/game_loop.png";
 
 export function MainLandingPage() {
   const [affinityOpen, setAffinityOpen] = useState(false);
+  const { startTutorial, emit } = useTutorial();
+
+  useFirstLandingTutorial(startTutorial);
 
   return (
     <>
@@ -23,6 +28,7 @@ export function MainLandingPage() {
           src={GAME_LOOP_IMAGE}
           alt="Game loop"
           className="mt-6 w-full max-w-2xl object-contain"
+          data-tutorial-target="game-loop-image"
         />
 
         <div className="mt-8 flex w-full max-w-2xl justify-between gap-4 px-4">
@@ -32,6 +38,8 @@ export function MainLandingPage() {
               buttonVariants({ variant: "outline", size: "lg" }),
               "min-h-[44px] min-w-[140px] sm:min-w-[160px]"
             )}
+            data-tutorial-target="daily-rewards-button"
+            onClick={() => emit("main-landing-daily-rewards-clicked")}
           >
             Daily Rewards
           </Link>
@@ -39,7 +47,11 @@ export function MainLandingPage() {
             variant="outline"
             size="lg"
             className="min-h-[44px] min-w-[140px] sm:min-w-[160px]"
-            onClick={() => setAffinityOpen(true)}
+            data-tutorial-target="affinity-reference-button"
+            onClick={() => {
+              emit("main-landing-affinity-clicked");
+              setAffinityOpen(true);
+            }}
           >
             Affinity Reference
           </Button>

@@ -1,93 +1,197 @@
 "use client";
 
 import * as React from "react";
-import dynamic from "next/dynamic";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
-  updatePlayCount,
-  getCurrentUserId,
-  updateTopScores,
-  getRewardRarity,
-  getRandomWeaponByRarity,
   addToInventory,
+  getCurrentUserId,
+  getRandomWeaponByRarity,
+  getRewardRarity,
+  updatePlayCount,
+  updateTopScores,
 } from "@/lib/weapon-game";
 import { checkUserHasItem, addXpToUser, RARITY_XP } from "@/lib/inventory";
-
-// Lazy-load Rules dialog so @radix-ui chunk is not required for initial page load (avoids EBUSY on Windows/OneDrive)
-const RulesDialog = dynamic(() => import("./RulesDialog"), { ssr: false });
 import { getTodayPlayCountForGear } from "@/lib/playcount";
+import { ENDGAME_REWARD_DELAY_MS } from "@/lib/game-constants";
 import { playDiceRollSound } from "@/lib/sounds";
-import { cn } from "@/lib/utils";
-import Image from "next/image";
+import {
+  computeScore,
+  DIE_FACE_IMAGES,
+  type DieFace,
+} from "@/lib/shoulders-scoring";
 import { useRouter } from "next/navigation";
-import { Check } from "lucide-react";
+import { TutorialButton } from "@/components/tutorial/TutorialButton";
+import { useTutorial } from "@/lib/tutorial/use-tutorial";
+import { useGearPageTutorialIntent } from "@/lib/tutorial/use-gear-page-tutorial-intent";
 
-const COLUMNS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-const CDN_BASE_URL = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/slots";
-const DICE_IMAGES_BASE_URL = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/bling/dice";
+const INITIAL_TURNS = 8;
+const TOTAL_DICE = 6;
 
-const NUMBERED_DICE_IMAGE_MAP: Record<number, string> = {
-  1: "one.png",
-  2: "two.png",
-  3: "three.png",
-  4: "four.png",
-  5: "five.png",
-  6: "six.png",
-};
+interface RolledDie {
+  face: DieFace;
+  angle: number;
+  offset: number;
+}
 
-// Column heights mapping (varying heights like Can't Stop)
-const COLUMN_HEIGHTS: Record<number, number> = {
-  2: 2,
-  3: 4,
-  4: 5,
-  5: 6,
-  6: 7,
-  7: 9,
-  8: 7,
-  9: 6,
-  10: 5,
-  11: 4,
-  12: 2,
-};
+function randomBetween(min: number, max: number): number {
+  return min + Math.random() * (max - min);
+}
 
-// Column slot types mapping
-const COLUMN_SLOTS: Record<number, string> = {
-  2: "boots.jpg",
-  3: "leggings.jpg",
-  4: "gauntlets.jpg",
-  5: "shoulders.jpg",
-  6: "chestpiece.jpg",
-  7: "helm.jpg",
-  8: "belt.jpg",
-  9: "shoulders.jpg",
-  10: "gauntlets.jpg",
-  11: "leggings.jpg",
-  12: "boots.jpg",
-};
+function rollDice(count: number): RolledDie[] {
+  const faces: DieFace[] = [
+    "Armor",
+    "Weapon",
+    "Aquatic",
+    "Fire",
+    "Verdant",
+    "Rock",
+  ];
+  const result: RolledDie[] = [];
+  for (let i = 0; i < count; i++) {
+    result.push({
+      face: faces[Math.floor(Math.random() * faces.length)],
+      angle: randomBetween(-30, 30),
+      offset: Math.floor(randomBetween(-5, 6)),
+    });
+  }
+  return result;
+}
 
-// Required columns for win condition
-const REQUIRED_COLUMNS = {
-  helm: 7,
-  chest: 6,
-  belt: 8,
-  shoulders: [5, 9],
-  gauntlets: [4, 10],
-  leggings: [3, 11],
-  boots: [2, 12],
-};
+function DieFaceIcon({ face, size = "md" }: { face: DieFace; size?: "sm" | "md" }) {
+  const dim = size === "sm" ? "w-8 h-8" : "w-14 h-14";
+  return (
+    <span className={`relative inline-block ${dim} shrink-0 rounded border border-game-board-border-muted game-panel-bg overflow-hidden [&>img]:object-cover`}>
+      <Image
+        src={DIE_FACE_IMAGES[face]}
+        alt={face}
+        fill
+        className="object-cover"
+        unoptimized
+        sizes={size === "sm" ? "32px" : "56px"}
+      />
+    </span>
+  );
+}
 
-type CellState = null | "highlighted" | "marked" | "lost";
+function ScoringReferenceBox() {
+  return (
+    <div className="rounded-lg border-2 border-game-board-border game-panel-bg p-4 shadow-md w-[333px] shrink-0">
+      <h3 className="font-semibold text-sm mb-3">Valid Scoring Combinations</h3>
+      <ul className="space-y-2 text-sm">
+        <li className="flex items-center gap-2 flex-wrap">
+          <DieFaceIcon face="Armor" size="sm" />
+          <span>1–2: 50 each</span>
+        </li>
+        <li className="flex items-center gap-2 flex-wrap">
+          <DieFaceIcon face="Weapon" size="sm" />
+          <span>1–2: 100 each</span>
+        </li>
+        <li className="flex items-center gap-2 flex-wrap">
+          <DieFaceIcon face="Armor" size="sm" />
+          <span className="text-white">×3</span>
+          <span>or</span>
+          <DieFaceIcon face="Weapon" size="sm" />
+          <span className="text-white">×3</span>
+          <span>: 800</span>
+        </li>
+        <li className="flex items-center gap-2 flex-wrap">
+          <DieFaceIcon face="Aquatic" size="sm" />
+          <span className="text-white">×3</span>
+          <span>or</span>
+          <DieFaceIcon face="Fire" size="sm" />
+          <span className="text-white">×3</span>
+          <span>: 250</span>
+        </li>
+        <li className="flex items-center gap-2 flex-wrap">
+          <DieFaceIcon face="Verdant" size="sm" />
+          <span className="text-white">×3</span>
+          <span>or</span>
+          <DieFaceIcon face="Rock" size="sm" />
+          <span className="text-white">×3</span>
+          <span>: 500</span>
+        </li>
+        <li className="flex items-center gap-2 flex-wrap">
+          <DieFaceIcon face="Armor" size="sm" />
+          <DieFaceIcon face="Weapon" size="sm" />
+          <DieFaceIcon face="Aquatic" size="sm" />
+          <DieFaceIcon face="Fire" size="sm" />
+          <DieFaceIcon face="Verdant" size="sm" />
+          <DieFaceIcon face="Rock" size="sm" />
+          <span>: 1000</span>
+        </li>
+        <li className="flex items-center gap-2">4 of a kind: 1000</li>
+        <li className="flex items-center gap-2">5 of a kind: 1500</li>
+        <li className="flex items-center gap-2">6 of a kind: 2000</li>
+      </ul>
+    </div>
+  );
+}
+
+function Die({
+  face,
+  angle = 0,
+  offset = 0,
+  onClick,
+  onDragStart,
+  draggable,
+  disabled,
+}: {
+  face: DieFace;
+  angle?: number;
+  offset?: number;
+  onClick?: () => void;
+  onDragStart?: (e: React.DragEvent) => void;
+  draggable?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <div
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
+      className={`relative w-14 h-14 shrink-0 rounded border-2 border-game-board-border-muted game-panel-bg overflow-hidden ${
+        disabled ? "pointer-events-none opacity-60" : "cursor-pointer hover:border-primary"
+      }`}
+      style={{
+        transform: `rotate(${angle}deg) translateY(${offset}px)`,
+      }}
+      aria-label={`Die showing ${face}`}
+    >
+      <Image
+        src={DIE_FACE_IMAGES[face]}
+        alt={face}
+        fill
+        className="object-cover"
+        unoptimized
+        sizes="56px"
+      />
+    </div>
+  );
+}
 
 export default function WeaponPage() {
   const [isGameActive, setIsGameActive] = React.useState(false);
-  const [turnsTaken, setTurnsTaken] = React.useState(0);
-  const [rolledDice, setRolledDice] = React.useState<number[]>([]);
-  const [separatedDice, setSeparatedDice] = React.useState<number[]>([]);
-  const [gridState, setGridState] = React.useState<CellState[][]>(
-    COLUMNS.map((col) => Array(COLUMN_HEIGHTS[col]).fill(null))
-  );
-  const [highlightedDiceArea, setHighlightedDiceArea] = React.useState<"rolled" | "separated" | "both" | null>(null);
+  const [turnsRemaining, setTurnsRemaining] = React.useState(INITIAL_TURNS);
+  const [score, setScore] = React.useState(0);
+  const [strikes, setStrikes] = React.useState(0);
+  const [bankedScore, setBankedScore] = React.useState(0);
+  const [diceInHand, setDiceInHand] = React.useState<RolledDie[]>([]);
+  const [bankedDice, setBankedDice] = React.useState<RolledDie[]>([]);
+  const [pendingBanked, setPendingBanked] = React.useState<RolledDie[]>([]);
+  const [rollDisabled, setRollDisabled] = React.useState(false);
+  const [bankDisabled, setBankDisabled] = React.useState(true);
+  const [isGameEnding, setIsGameEnding] = React.useState(false);
   const [showCompletionScreen, setShowCompletionScreen] = React.useState(false);
+  const [finalScore, setFinalScore] = React.useState(0);
   const [rewardWeapon, setRewardWeapon] = React.useState<{
     id: string;
     name: string;
@@ -95,14 +199,9 @@ export default function WeaponPage() {
     rarity: string;
   } | null>(null);
   const [rewardXp, setRewardXp] = React.useState<number | null>(null);
-  const [finalTurns, setFinalTurns] = React.useState(0);
-  const [showRules, setShowRules] = React.useState(false);
-  const [noPlacementMessage, setNoPlacementMessage] = React.useState("");
-  const [isGameEnding, setIsGameEnding] = React.useState(false);
-  const [draggedDieIndex, setDraggedDieIndex] = React.useState<number | null>(null);
-  const [placeJustClicked, setPlaceJustClicked] = React.useState(false);
-  const [rollJustClicked, setRollJustClicked] = React.useState(false);
+  const [strikeFromRoll, setStrikeFromRoll] = React.useState(false);
   const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
+  const suppressClickAfterDropToBankedRef = React.useRef(false);
   const router = useRouter();
 
   React.useEffect(() => {
@@ -117,558 +216,173 @@ export default function WeaponPage() {
       cancelled = true;
     };
   }, []);
+  const suppressClickAfterDropToHandRef = React.useRef(false);
+  const diceInHandRef = React.useRef<RolledDie[]>(diceInHand);
+  const pendingBankedRef = React.useRef<RolledDie[]>(pendingBanked);
 
-  // Helper function to get column index from dice sum
-  const getColumnIndex = (sum: number): number | null => {
-    const index = COLUMNS.indexOf(sum);
-    return index >= 0 ? index : null;
-  };
+  diceInHandRef.current = diceInHand;
+  pendingBankedRef.current = pendingBanked;
 
-  // Helper function to check if column top cell is marked or highlighted
-  // Top cell is at index 0 (first element, rendered at top)
-  const isColumnTopMarkedOrHighlighted = (columnIndex: number): boolean => {
-    if (columnIndex < 0 || columnIndex >= COLUMNS.length) return false;
-    const topCell = gridState[columnIndex][0]; // Index 0 is the top cell
-    return topCell === "marked" || topCell === "highlighted";
-  };
+  const pendingResult = React.useMemo(
+    () =>
+      computeScore(pendingBanked.map((d) => d.face), {
+        requireAllDiceScored: true,
+      }),
+    [pendingBanked]
+  );
+  const canBank = pendingResult.valid;
 
-  // Helper function to count highlighted column icons
-  const countHighlightedColumns = (): number => {
-    let count = 0;
-    for (let col = 0; col < COLUMNS.length; col++) {
-      const hasHighlighted = gridState[col].some((cell) => cell === "highlighted");
-      if (hasHighlighted) count++;
-    }
-    return count;
-  };
-
-  // Helper function to find lowest unfilled cell in column
-  // "Lowermost" means the cell closest to the bottom, which is the last index in the array
-  const findLowestUnfilledCell = (columnIndex: number): number | null => {
-    if (columnIndex < 0 || columnIndex >= COLUMNS.length) return null;
-    const columnValue = COLUMNS[columnIndex];
-    const columnHeight = COLUMN_HEIGHTS[columnValue];
-    // Search from the end (bottom) backwards to find the lowermost unfilled cell
-    for (let row = columnHeight - 1; row >= 0; row--) {
-      if (gridState[columnIndex][row] === null) {
-        return row;
-      }
-    }
-    return null; // Column is full
-  };
-
-  // Handle dice roll
-  const handleRoll = () => {
-    if (rollJustClicked) return; // Prevent multiple clicks
-    playDiceRollSound();
-
-    // Immediately disable Roll button
-    setRollJustClicked(true);
-    
-    const newDice = Array.from({ length: 4 }, () => Math.floor(Math.random() * 6) + 1);
-    setRolledDice(newDice);
-    setSeparatedDice([]);
-    setHighlightedDiceArea(null);
-    setNoPlacementMessage("");
-    setPlaceJustClicked(false); // Re-enable Place button after rolling
-  };
-
-  // Handle dice drag start
-  const handleDiceDragStart = (index: number, e: React.DragEvent) => {
-    if (separatedDice.length >= 2) return; // Already have 2 dice separated
-    setDraggedDieIndex(index);
-    e.dataTransfer.effectAllowed = "move";
-  };
-
-  // Handle dice drop in separated area
-  const handleSeparatedDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (draggedDieIndex === null || separatedDice.length >= 2) return;
-
-    const dieValue = rolledDice[draggedDieIndex];
-    setSeparatedDice((prev) => [...prev, dieValue]);
-    setRolledDice((prev) => prev.filter((_, i) => i !== draggedDieIndex));
-    setDraggedDieIndex(null);
-  };
-
-  // Handle dice drag over
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  };
-
-  // Handle removing dice from separated area (click to remove)
-  const handleRemoveSeparatedDie = (index: number) => {
-    const dieValue = separatedDice[index];
-    setSeparatedDice((prev) => prev.filter((_, i) => i !== index));
-    setRolledDice((prev) => [...prev, dieValue]);
-    setHighlightedDiceArea(null);
-    setNoPlacementMessage("");
-  };
-
-  // Handle moving die from rolled area to separated area (click to move)
-  const handleMoveRolledDieToSeparated = (index: number) => {
-    if (separatedDice.length >= 2) return;
-    const dieValue = rolledDice[index];
-    setSeparatedDice((prev) => [...prev, dieValue]);
-    setRolledDice((prev) => prev.filter((_, i) => i !== index));
-    setHighlightedDiceArea(null);
-    setNoPlacementMessage("");
-  };
-
-  // Helper function to check if column has any highlighted cells
-  const hasColumnHighlighted = (columnIndex: number): boolean => {
-    if (columnIndex < 0 || columnIndex >= COLUMNS.length) return false;
-    return gridState[columnIndex].some((cell) => cell === "highlighted");
-  };
-
-  // Update highlighting when dice change
   React.useEffect(() => {
-    // Don't update highlighting if Place was just clicked (waiting for next roll)
-    if (placeJustClicked) {
+    setBankDisabled(strikeFromRoll || !canBank);
+  }, [canBank, strikeFromRoll]);
+
+  const startGame = React.useCallback(() => {
+    setIsGameActive(true);
+    setTurnsRemaining(INITIAL_TURNS);
+    setScore(0);
+    setStrikes(0);
+    setBankedScore(0);
+    setDiceInHand([]);
+    setBankedDice([]);
+    setPendingBanked([]);
+    setRollDisabled(false);
+    setBankDisabled(true);
+    setIsGameEnding(false);
+    setShowCompletionScreen(false);
+    setFinalScore(0);
+    setRewardWeapon(null);
+    setRewardXp(null);
+    setStrikeFromRoll(false);
+  }, []);
+
+  const handleRoll = React.useCallback(() => {
+    playDiceRollSound();
+    const inBanked = bankedDice.length + pendingBanked.length;
+    let newDice: RolledDie[];
+    if (inBanked === TOTAL_DICE) {
+      setBankedDice([]);
+      setPendingBanked([]);
+      newDice = rollDice(TOTAL_DICE);
+      setDiceInHand(newDice);
+    } else {
+      newDice = rollDice(TOTAL_DICE - inBanked);
+      setDiceInHand(newDice);
+    }
+    setRollDisabled(true);
+    const rollScores = computeScore(newDice.map((d) => d.face)).valid;
+    if (!rollScores) {
+      setBankedScore(0);
+      setBankDisabled(true);
+      setStrikeFromRoll(true);
+    } else {
+      setStrikeFromRoll(false);
+    }
+  }, [bankedDice.length, pendingBanked.length]);
+
+  const moveToBanked = React.useCallback((index: number) => {
+    if (rollDisabled === false) return;
+    if (suppressClickAfterDropToBankedRef.current) {
+      suppressClickAfterDropToBankedRef.current = false;
       return;
     }
-    
-    if (rolledDice.length !== 2 || separatedDice.length !== 2) {
-      setHighlightedDiceArea(null);
+    const hand = diceInHandRef.current;
+    const removed = hand[index];
+    if (removed === undefined) return;
+    setDiceInHand((prev) => prev.filter((_, i) => i !== index));
+    setPendingBanked((prev) => [...prev, removed]);
+  }, [rollDisabled]);
+
+  const moveToHand = React.useCallback((index: number) => {
+    if (rollDisabled === false) return;
+    if (suppressClickAfterDropToHandRef.current) {
+      suppressClickAfterDropToHandRef.current = false;
       return;
     }
+    const pending = pendingBankedRef.current;
+    const removed = pending[index];
+    if (removed === undefined) return;
+    setPendingBanked((prev) => prev.filter((_, i) => i !== index));
+    setDiceInHand((prev) => [...prev, removed]);
+  }, [rollDisabled]);
 
-    const diceSum1 = rolledDice[0] + rolledDice[1];
-    const diceSum2 = separatedDice[0] + separatedDice[1];
-    const colIndex1 = getColumnIndex(diceSum1);
-    const colIndex2 = getColumnIndex(diceSum2);
+  const handleBankDice = React.useCallback(() => {
+    if (!canBank) return;
+    setBankedScore((s) => s + pendingResult.score);
+    setBankedDice((b) => [...b, ...pendingBanked]);
+    setPendingBanked([]);
+    setBankDisabled(true);
+    setRollDisabled(false);
+  }, [canBank, pendingBanked, pendingResult.score]);
 
-    // Step (a): Check if column for dice_sum_1 has not had uppermost cell marked/highlighted
-    const canHighlight1 = colIndex1 !== null && !isColumnTopMarkedOrHighlighted(colIndex1);
-    
-    // Step (b): Check if column for dice_sum_2 has not had uppermost cell marked/highlighted
-    const canHighlight2 = colIndex2 !== null && !isColumnTopMarkedOrHighlighted(colIndex2);
-
-    // Step (c): Count highlighted column icons
-    const highlightedCount = countHighlightedColumns();
-
-    // Determine highlighting based on rules
-    if (highlightedCount === 0 || highlightedCount === 1) {
-      // Activate Place button - highlight areas that can be highlighted
-      if (canHighlight1 && canHighlight2) {
-        // Both can be highlighted - highlight both areas
-        setHighlightedDiceArea("both");
-      } else if (canHighlight1) {
-        setHighlightedDiceArea("rolled");
-      } else if (canHighlight2) {
-        setHighlightedDiceArea("separated");
-      } else {
-        setHighlightedDiceArea(null);
-      }
-    } else if (highlightedCount === 3) {
-      // If column for dice_sum_1 has highlighted icon, highlight rolled area and activate Place
-      // If column for dice_sum_2 has highlighted icon, highlight separated area and activate Place
-      // Both can be highlighted simultaneously
-      const highlight1 = colIndex1 !== null && hasColumnHighlighted(colIndex1);
-      const highlight2 = colIndex2 !== null && hasColumnHighlighted(colIndex2);
-      
-      if (highlight1 && highlight2) {
-        setHighlightedDiceArea("both");
-      } else if (highlight1) {
-        setHighlightedDiceArea("rolled");
-      } else if (highlight2) {
-        setHighlightedDiceArea("separated");
-      } else {
-        setHighlightedDiceArea(null);
-      }
-    } else if (highlightedCount === 2) {
-      // If column for dice_sum_1 has highlighted icon, highlight rolled area and activate Place
-      // If column for dice_sum_2 has highlighted icon, highlight separated area and activate Place
-      // Both can be highlighted simultaneously
-      const highlight1 = colIndex1 !== null && hasColumnHighlighted(colIndex1);
-      const highlight2 = colIndex2 !== null && hasColumnHighlighted(colIndex2);
-      
-      // Check if columns have at least one unfilled/unhighlighted cell
-      const col1HasUnfilledCell = colIndex1 !== null && findLowestUnfilledCell(colIndex1) !== null;
-      const col2HasUnfilledCell = colIndex2 !== null && findLowestUnfilledCell(colIndex2) !== null;
-      
-      if (highlight1 && highlight2) {
-        // Both columns are highlighted - highlight both dice areas
-        setHighlightedDiceArea("both");
-      } else if (highlight1) {
-        // Rolled dice matches a highlighted column
-        // Check if separated dice column has at least one unfilled cell
-        if (col2HasUnfilledCell) {
-          setHighlightedDiceArea("both");
-        } else {
-          setHighlightedDiceArea("rolled");
-        }
-      } else if (highlight2) {
-        // Separated dice matches a highlighted column
-        // Check if rolled dice column has at least one unfilled cell
-        if (col1HasUnfilledCell) {
-          setHighlightedDiceArea("both");
-        } else {
-          setHighlightedDiceArea("separated");
-        }
-      } else {
-        // If both sums are equal, no need to select — highlight both; placement will fill two cells in shared column
-        if (diceSum1 === diceSum2 && col1HasUnfilledCell) {
-          setHighlightedDiceArea("both");
-        } else {
-          // Place button inactive - player must click to select
-          setHighlightedDiceArea(null);
-        }
-      }
-    } else {
-      setHighlightedDiceArea(null);
-    }
-  }, [rolledDice, separatedDice, gridState, placeJustClicked]);
-
-  // Handle Place button
-  const handlePlace = () => {
-    if (!highlightedDiceArea || rolledDice.length !== 2 || separatedDice.length !== 2 || placeJustClicked) return;
-
-    // Immediately disable Place button to prevent multiple clicks
-    setPlaceJustClicked(true);
-
-    if (highlightedDiceArea === "both") {
-      // Highlight cells in both columns (or two cells in same column if sums are equal)
-      const diceSum1 = rolledDice[0] + rolledDice[1];
-      const diceSum2 = separatedDice[0] + separatedDice[1];
-      const columnIndex1 = getColumnIndex(diceSum1);
-      const columnIndex2 = getColumnIndex(diceSum2);
-
-      if (diceSum1 === diceSum2 && columnIndex1 !== null) {
-        // Same column - mark two cells if available
-        const cellIndex1 = findLowestUnfilledCell(columnIndex1);
-        
-        if (cellIndex1 === null) {
-          // No allowed placement - show error and change highlights to lost
-          setNoPlacementMessage("No allowed placements. You must end your turn");
-          setGridState((prev) =>
-            prev.map((column) =>
-              column.map((cell) => (cell === "highlighted" ? "lost" : cell))
-            )
-          );
-        } else {
-          // Mark first cell, then find and mark second cell
-          setGridState((prev) => {
-            const newState = prev.map((col) => [...col]);
-            newState[columnIndex1][cellIndex1] = "highlighted";
-            
-            // Find second unfilled cell by checking the newState array
-            const columnValue = COLUMNS[columnIndex1];
-            const columnHeight = COLUMN_HEIGHTS[columnValue];
-            let cellIndex2: number | null = null;
-            for (let row = columnHeight - 1; row >= 0; row--) {
-              if (newState[columnIndex1][row] === null) {
-                cellIndex2 = row;
-                break;
-              }
-            }
-            
-            if (cellIndex2 !== null) {
-              newState[columnIndex1][cellIndex2] = "highlighted";
-            }
-            
-            return newState;
-          });
-        }
-      } else {
-        // Different columns - mark one cell in each
-        const cellIndex1 = columnIndex1 !== null ? findLowestUnfilledCell(columnIndex1) : null;
-        const cellIndex2 = columnIndex2 !== null ? findLowestUnfilledCell(columnIndex2) : null;
-        const anyPlaced = cellIndex1 !== null || cellIndex2 !== null;
-
-        if (!anyPlaced) {
-          // No allowed placement - show error and change highlights to lost
-          setNoPlacementMessage("No allowed placements. You must end your turn");
-          setGridState((prev) =>
-            prev.map((column) =>
-              column.map((cell) => (cell === "highlighted" ? "lost" : cell))
-            )
-          );
-        } else {
-          // Highlight cells in both columns
-          setGridState((prev) => {
-            const newState = prev.map((col) => [...col]);
-            
-            // Place in first column
-            if (columnIndex1 !== null && cellIndex1 !== null) {
-              newState[columnIndex1][cellIndex1] = "highlighted";
-            }
-            
-            // Place in second column
-            if (columnIndex2 !== null && cellIndex2 !== null) {
-              newState[columnIndex2][cellIndex2] = "highlighted";
-            }
-            
-            return newState;
-          });
-        }
-      }
-    } else {
-      // Highlight cell in single column
-      const diceSum = highlightedDiceArea === "rolled" 
-        ? rolledDice[0] + rolledDice[1]
-        : separatedDice[0] + separatedDice[1];
-      
-      const columnIndex = getColumnIndex(diceSum);
-      if (columnIndex === null) {
-        setPlaceJustClicked(false);
-        setHighlightedDiceArea(null); // Clear highlighting even on error
-        return;
-      }
-
-      const cellIndex = findLowestUnfilledCell(columnIndex);
-      
-      if (cellIndex === null) {
-        // No allowed placement - show error and change highlights to lost
-        setNoPlacementMessage("No allowed placements. You must end your turn");
-        setGridState((prev) =>
-          prev.map((column) =>
-            column.map((cell) => (cell === "highlighted" ? "lost" : cell))
-          )
-        );
-      } else {
-        // Highlight the cell
-        setGridState((prev) => {
-          const newState = prev.map((col) => [...col]);
-          newState[columnIndex][cellIndex] = "highlighted";
-          return newState;
-        });
-      }
-    }
-
-    // Clear dice area highlights
-    setHighlightedDiceArea(null);
-    setNoPlacementMessage("");
-    setRollJustClicked(false); // Re-enable Roll button after placing
-  };
-
-  // Handle clicking dice area to select (for 2 highlighted columns case) — only after roll, before place
-  const handleDiceAreaClick = (area: "rolled" | "separated") => {
-    if (placeJustClicked) return; // After placing, ignore clicks until they roll again
-    if (rolledDice.length !== 2 || separatedDice.length !== 2) return;
-    
-    const highlightedCount = countHighlightedColumns();
-    if (highlightedCount === 2 && !highlightedDiceArea) {
-      // Only allow selection if Place button is inactive and we have 2 highlighted columns
-      // Set the clicked area as highlighted - only one area can be highlighted at once
-      setHighlightedDiceArea(area);
-    }
-  };
-
-  // Handle End Turn button
-  const handleEndTurn = () => {
-    // If player did not click Place this turn, clear any green cells to empty and end turn
-    if (!placeJustClicked) {
-      setGridState((prev) =>
-        prev.map((column) =>
-          column.map((cell) => (cell === "highlighted" ? null : cell === "lost" ? null : cell))
-        )
-      );
-
-      setTurnsTaken((prev) => prev + 1);
-      setRolledDice([]);
-      setSeparatedDice([]);
-      setHighlightedDiceArea(null);
-      setNoPlacementMessage("");
-      setPlaceJustClicked(false);
-      setRollJustClicked(false);
-      return;
-    }
-
-    // Player placed this turn: convert green highlights to marked (commit placements)
-    setGridState((prev) =>
-      prev.map((column) =>
-        column.map((cell) => (cell === "highlighted" ? "marked" : cell === "lost" ? null : cell))
-      )
-    );
-
-    // Check win condition - check topmost cell of each required column
-    // Top cell is at index 0 (first element in array)
-    // Check for "highlighted" or "marked" since highlighted cells will become marked
-    const helmColIndex = COLUMNS.indexOf(REQUIRED_COLUMNS.helm);
-    const helmMarked = helmColIndex >= 0 && (gridState[helmColIndex][0] === "marked" || gridState[helmColIndex][0] === "highlighted");
-    
-    const chestColIndex = COLUMNS.indexOf(REQUIRED_COLUMNS.chest);
-    const chestMarked = chestColIndex >= 0 && (gridState[chestColIndex][0] === "marked" || gridState[chestColIndex][0] === "highlighted");
-    
-    const beltColIndex = COLUMNS.indexOf(REQUIRED_COLUMNS.belt);
-    const beltMarked = beltColIndex >= 0 && (gridState[beltColIndex][0] === "marked" || gridState[beltColIndex][0] === "highlighted");
-    
-    const shouldersMarked = REQUIRED_COLUMNS.shoulders.some(
-      (col) => {
-        const colIndex = COLUMNS.indexOf(col);
-        return colIndex >= 0 && (gridState[colIndex][0] === "marked" || gridState[colIndex][0] === "highlighted");
-      }
-    );
-    const gauntletsMarked = REQUIRED_COLUMNS.gauntlets.some(
-      (col) => {
-        const colIndex = COLUMNS.indexOf(col);
-        return colIndex >= 0 && (gridState[colIndex][0] === "marked" || gridState[colIndex][0] === "highlighted");
-      }
-    );
-    const leggingsMarked = REQUIRED_COLUMNS.leggings.some(
-      (col) => {
-        const colIndex = COLUMNS.indexOf(col);
-        return colIndex >= 0 && (gridState[colIndex][0] === "marked" || gridState[colIndex][0] === "highlighted");
-      }
-    );
-    const bootsMarked = REQUIRED_COLUMNS.boots.some(
-      (col) => {
-        const colIndex = COLUMNS.indexOf(col);
-        return colIndex >= 0 && (gridState[colIndex][0] === "marked" || gridState[colIndex][0] === "highlighted");
-      }
-    );
-
-    if (helmMarked && chestMarked && beltMarked && shouldersMarked && gauntletsMarked && leggingsMarked && bootsMarked) {
-      handleGameEnd();
-    } else {
-      // Increment turns and reset for next turn
-      setTurnsTaken((prev) => prev + 1);
-      setRolledDice([]);
-      setSeparatedDice([]);
-      setHighlightedDiceArea(null);
-      setNoPlacementMessage("");
-      setPlaceJustClicked(false); // Re-enable Place button for next turn
-      setRollJustClicked(false); // Re-enable Roll button for next turn
-    }
-  };
-
-  // Handle game end
-  const handleGameEnd = async () => {
+  const triggerEndgame = React.useCallback(async () => {
     setIsGameEnding(true);
-    const finalTurnsValue = turnsTaken;
-    setFinalTurns(finalTurnsValue);
-
-    // Pause for 2 seconds
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
+    setFinalScore(score + bankedScore);
+    await new Promise((r) => setTimeout(r, ENDGAME_REWARD_DELAY_MS));
+    const total = score + bankedScore;
+    setFinalScore(total);
     try {
       const userId = await getCurrentUserId();
-      if (!userId) {
-        console.error("No user ID found when processing game end");
-        setIsGameActive(false);
-        setShowCompletionScreen(true);
-        return;
-      }
-
-      // Update top scores
-      await updateTopScores(userId, finalTurnsValue);
-
-      // Get reward based on turns
-      const rarity = await getRewardRarity(finalTurnsValue);
-      console.log("Reward rarity for", finalTurnsValue, "turns:", rarity);
-      
-      if (rarity) {
-        const weapon = await getRandomWeaponByRarity(rarity);
-        console.log("Random weapon selected:", weapon);
-        
-        if (weapon) {
-          const alreadyHas = await checkUserHasItem(userId, weapon.id);
-          if (alreadyHas) {
-            const xpVal = RARITY_XP[weapon.rarity] ?? RARITY_XP.Base ?? 1;
-            await addXpToUser(userId, xpVal);
-            setRewardXp(xpVal);
-            setRewardWeapon(null);
-          } else {
-            await addToInventory(userId, weapon.id);
-            console.log("Weapon added to inventory:", weapon.id);
-            setRewardWeapon(weapon);
-            setRewardXp(null);
+      if (userId) {
+        await updateTopScores(userId, total);
+        const rarity = await getRewardRarity(total);
+        if (rarity) {
+          const weapon = await getRandomWeaponByRarity(rarity);
+          if (weapon) {
+            const alreadyHas = await checkUserHasItem(userId, weapon.id);
+            if (alreadyHas) {
+              const xpVal = RARITY_XP[weapon.rarity] ?? RARITY_XP.Base ?? 1;
+              await addXpToUser(userId, xpVal);
+              setRewardXp(xpVal);
+              setRewardWeapon(null);
+            } else {
+              await addToInventory(userId, weapon.id);
+              setRewardWeapon(weapon);
+              setRewardXp(null);
+            }
           }
-        } else {
-          console.error("No weapon found for rarity:", rarity);
         }
-      } else {
-        console.error("No rarity found for turns:", finalTurnsValue);
       }
-    } catch (error) {
-      console.error("Failed to process game end:", error);
-      // Log more details about the error
-      if (error instanceof Error) {
-        console.error("Error message:", error.message);
-        console.error("Error stack:", error.stack);
-      }
+    } catch (e) {
+      console.error("Failed to process game end:", e);
     }
-
-    // Show completion screen
     setIsGameActive(false);
     setShowCompletionScreen(true);
-  };
+  }, [score, bankedScore]);
 
-  // Handle Play Game button
-  const handlePlayGame = async () => {
-    const userId = await getCurrentUserId();
-    if (userId) {
-      await updatePlayCount(userId);
-      setTodayPlayCount((prev) => (prev !== null ? prev + 1 : null));
+  const handleEndTurn = React.useCallback(() => {
+    let newScore = score;
+    let newStrikes = strikes;
+    if (bankedScore === 0) {
+      newStrikes = strikes + 1;
+      setStrikes(newStrikes);
+      if (newStrikes >= 3) {
+        triggerEndgame();
+        return;
+      }
+    } else {
+      newScore = score + bankedScore;
+      setScore(newScore);
     }
-    setIsGameActive(true);
-    setTurnsTaken(0);
-    setRolledDice([]);
-    setSeparatedDice([]);
-    setGridState(COLUMNS.map((col) => Array(COLUMN_HEIGHTS[col]).fill(null)));
-    setHighlightedDiceArea(null);
+    setBankedScore(0);
+    setBankedDice([]);
+    setPendingBanked([]);
+    setDiceInHand([]);
+    setRollDisabled(false);
+    setBankDisabled(true);
+    setStrikeFromRoll(false);
+    const newTurns = turnsRemaining - 1;
+    setTurnsRemaining(newTurns);
+    if (newTurns <= 0) {
+      triggerEndgame();
+    }
+  }, [score, strikes, bankedScore, turnsRemaining, triggerEndgame]);
+
+  const handleResetAfterComplete = React.useCallback(() => {
     setShowCompletionScreen(false);
     setRewardWeapon(null);
     setRewardXp(null);
-    setFinalTurns(0);
-    setNoPlacementMessage("");
-    setIsGameEnding(false);
-    setPlaceJustClicked(false);
-    setRollJustClicked(false);
-  };
-
-  // Handle Reset Game
-  const handleResetGame = () => {
-    setShowCompletionScreen(false);
-    setRewardWeapon(null);
-    setRewardXp(null);
-    setFinalTurns(0);
-    setIsGameActive(false);
-    setIsGameEnding(false);
-    setTurnsTaken(0);
-    setRolledDice([]);
-    setSeparatedDice([]);
-    setGridState(COLUMNS.map((col) => Array(COLUMN_HEIGHTS[col]).fill(null)));
-  };
-
-  // Check if Place button should be enabled
-  const isPlaceEnabled = React.useMemo(() => {
-    if (placeJustClicked) return false; // Disable if Place was just clicked
-    if (rolledDice.length !== 2 || separatedDice.length !== 2) return false;
-    if (!highlightedDiceArea) return false;
-    
-    const highlightedCount = countHighlightedColumns();
-    // Place button is enabled when:
-    // - 0 or 1 highlighted columns: always enabled if area is highlighted
-    // - 2 highlighted columns: enabled if area is highlighted (or after click selection)
-    // - 3 highlighted columns: enabled if area is highlighted
-    return highlightedDiceArea !== null;
-  }, [rolledDice, separatedDice, highlightedDiceArea, gridState, placeJustClicked]);
-
-  // Show "Select which set of dice to place." only after roll and before place (2 highlighted columns, no selection yet)
-  const showSelectDiceMessage = React.useMemo(() => {
-    if (placeJustClicked) return false; // After placing, don't show until they roll again
-    if (rolledDice.length !== 2 || separatedDice.length !== 2) return false;
-    if (highlightedDiceArea !== null) return false;
-    return countHighlightedColumns() === 2;
-  }, [placeJustClicked, rolledDice, separatedDice, highlightedDiceArea, gridState]);
-
-  const gearCompletion = React.useMemo(() => {
-    const helmCol = COLUMNS.indexOf(REQUIRED_COLUMNS.helm);
-    const chestCol = COLUMNS.indexOf(REQUIRED_COLUMNS.chest);
-    const beltCol = COLUMNS.indexOf(REQUIRED_COLUMNS.belt);
-    return {
-      helm: isColumnTopMarkedOrHighlighted(helmCol),
-      chestpiece: isColumnTopMarkedOrHighlighted(chestCol),
-      belt: isColumnTopMarkedOrHighlighted(beltCol),
-      shoulders: REQUIRED_COLUMNS.shoulders.some((col) => isColumnTopMarkedOrHighlighted(COLUMNS.indexOf(col))),
-      gauntlets: REQUIRED_COLUMNS.gauntlets.some((col) => isColumnTopMarkedOrHighlighted(COLUMNS.indexOf(col))),
-      leggings: REQUIRED_COLUMNS.leggings.some((col) => isColumnTopMarkedOrHighlighted(COLUMNS.indexOf(col))),
-      boots: REQUIRED_COLUMNS.boots.some((col) => isColumnTopMarkedOrHighlighted(COLUMNS.indexOf(col))),
-    };
-  }, [gridState]);
+    setFinalScore(0);
+  }, []);
 
   React.useEffect(() => {
     if (showCompletionScreen && (rewardWeapon || rewardXp !== null)) {
@@ -677,17 +391,18 @@ export default function WeaponPage() {
     }
   }, [showCompletionScreen, rewardWeapon, rewardXp]);
 
-  // Show completion screen
   if (showCompletionScreen) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-page p-6">
-        <div className="max-w-md w-full game-panel-bg rounded-lg shadow-lg p-8 text-center space-y-4">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] bg-page p-6">
+        <div className="max-w-md w-full game-panel-bg rounded-lg shadow-lg border border-game-board-border p-8 text-center space-y-4">
           <h2 className="text-3xl font-bold">Game Complete!</h2>
-          <p className="text-lg">Congratulations! You have completed the game.</p>
-          <div className="text-2xl font-bold">Turns Taken: {finalTurns}</div>
+          <p className="text-lg">You have completed the game.</p>
+          <div className="text-2xl font-bold">Final Score: {finalScore}</div>
           {rewardWeapon && (
             <div className="pt-4 border-t">
-              <p className="text-sm text-gray-600 mb-2">You have been rewarded with:</p>
+              <p className="text-sm text-muted-foreground mb-2">
+                You have been rewarded with:
+              </p>
               <p className="text-xl font-semibold text-primary mb-3">{rewardWeapon.name}</p>
               {rewardWeapon.image_url && (
                 <div className="flex justify-center">
@@ -716,9 +431,17 @@ export default function WeaponPage() {
     );
   }
 
+  const handlePlayGame = async () => {
+    const userId = await getCurrentUserId();
+    if (userId) {
+      await updatePlayCount(userId);
+      setTodayPlayCount((prev) => (prev !== null ? prev + 1 : null));
+    }
+    startGame();
+  };
+
   return (
     <div className="space-y-6 p-6 min-h-screen bg-page">
-      {/* Header with buttons */}
       <div className="flex justify-between items-center">
         <Button
           onClick={() => void handlePlayGame()}
@@ -731,245 +454,160 @@ export default function WeaponPage() {
             ? "No plays remaining today"
             : "Play Game"}
         </Button>
-        <Button variant="outline" onClick={() => setShowRules(true)}>
-          Rules
-        </Button>
+        <TutorialButton tutorialId="weapon" variant="outline" />
       </div>
 
-      {/* Game area */}
-      {isGameActive && (
-        <div className="space-y-4">
-          {/* Turns Taken counter */}
-          <div className="text-2xl font-bold text-center">
-            Turns Taken: {turnsTaken}
+      {isGameActive ? (
+        <div className="flex flex-row gap-6 items-start game-interactive">
+          <div className="border-2 border-game-board-border rounded-lg p-4 game-panel-bg shadow-lg space-y-4 flex-1 min-w-0">
+          <div className="flex justify-between items-center">
+            <div className="flex gap-6">
+              <span>
+                Turns Remaining: <strong>{turnsRemaining}</strong>
+              </span>
+              <span>
+                Strikes: <strong>{strikes}</strong>
+              </span>
+            </div>
+            <span>
+              Score: <strong>{score}</strong>
+            </span>
           </div>
 
-          {/* Buttons and Dice areas */}
-          <div className="game-panel-bg p-4 rounded-lg shadow-lg game-interactive">
-            <div className="flex flex-col md:flex-row gap-4 justify-center items-start">
-              {/* Buttons - fixed width so location stays consistent */}
-              <div className="flex flex-col gap-2 items-center justify-center w-[140px] min-w-[140px] shrink-0">
-                <Button
-                  onClick={handleRoll}
-                  disabled={rollJustClicked || isGameEnding}
-                  className="w-full min-w-[120px]"
-                >
-                  Roll
-                </Button>
-                <Button
-                  onClick={handlePlace}
-                  disabled={!isPlaceEnabled || isGameEnding}
-                  className="w-full min-w-[120px]"
-                >
-                  Place
-                </Button>
-                <div className="flex flex-col items-center gap-2 w-full">
-                  <Button
-                    onClick={handleEndTurn}
-                    disabled={isGameEnding}
-                    className="w-full min-w-[120px]"
-                  >
-                    End Turn
-                  </Button>
-                  {noPlacementMessage && (
-                    <span className="text-red-600 font-semibold text-sm text-center">{noPlacementMessage}</span>
-                  )}
-                  {showSelectDiceMessage && (
-                    <span className="font-bold text-sm text-center">Select which set of dice to place.</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Rolled dice area - fixed width */}
-              <div
-                className={cn(
-                  "border-2 rounded-lg p-4 w-[280px] min-w-[280px] h-[120px] flex flex-col items-center justify-center cursor-pointer shrink-0",
-                  (highlightedDiceArea === "rolled" || highlightedDiceArea === "both") && "bg-[rgb(55,150,75)] border-[rgb(45,130,65)]",
-                  highlightedDiceArea !== "rolled" && highlightedDiceArea !== "both" && "border-game-board-border-muted bg-game-board-panel-muted"
-                )}
-                onClick={() => handleDiceAreaClick("rolled")}
-              >
-                <div className="w-full text-center font-semibold mb-2 opacity-50">Rolled Dice</div>
-                <div className="flex flex-nowrap gap-1 justify-center items-center">
-                  {rolledDice.map((die, index) => (
-                    <div
-                      key={index}
-                      draggable={separatedDice.length < 2}
-                      onDragStart={(e) => handleDiceDragStart(index, e)}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (separatedDice.length < 2) handleMoveRolledDieToSeparated(index);
-                      }}
-                      className={cn(
-                        "flex items-center justify-center overflow-hidden",
-                        separatedDice.length < 2 && "cursor-move cursor-pointer"
-                      )}
-                    >
-                      <Image
-                        src={`${DICE_IMAGES_BASE_URL}/${NUMBERED_DICE_IMAGE_MAP[die]}`}
-                        alt={`${die}`}
-                        width={64}
-                        height={64}
-                        className="object-contain w-16 h-16"
-                        unoptimized
-                      />
-                    </div>
-                  ))}
-                </div>
-                {rolledDice.length === 2 && (
-                  <div className="w-full text-center text-sm mt-2">
-                    Sum: {rolledDice[0] + rolledDice[1]}
-                  </div>
-                )}
-              </div>
-
-              {/* Separated dice area - fixed width */}
-              <div
-                className={cn(
-                  "border-2 rounded-lg p-4 w-[280px] min-w-[280px] h-[120px] flex flex-col items-center justify-center shrink-0",
-                  (highlightedDiceArea === "separated" || highlightedDiceArea === "both") && "bg-[rgb(55,150,75)] border-[rgb(45,130,65)]",
-                  highlightedDiceArea !== "separated" && highlightedDiceArea !== "both" && "border-game-board-border-muted bg-game-board-panel-muted"
-                )}
-                onDrop={handleSeparatedDrop}
-                onDragOver={handleDragOver}
-                onClick={() => handleDiceAreaClick("separated")}
-              >
-                <div className="w-full text-center font-semibold mb-2 opacity-50">Separated Dice</div>
-                <div className="flex flex-nowrap gap-1 justify-center items-center">
-                  {separatedDice.map((die, index) => (
-                    <div
-                      key={index}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveSeparatedDie(index);
-                      }}
-                      className="flex items-center justify-center overflow-hidden cursor-pointer"
-                    >
-                      <Image
-                        src={`${DICE_IMAGES_BASE_URL}/${NUMBERED_DICE_IMAGE_MAP[die]}`}
-                        alt={`${die}`}
-                        width={64}
-                        height={64}
-                        className="object-contain w-16 h-16"
-                        unoptimized
-                      />
-                    </div>
-                  ))}
-                </div>
-                {separatedDice.length === 2 && (
-                  <div className="w-full text-center text-sm mt-2">
-                    Sum: {separatedDice[0] + separatedDice[1]}
-                  </div>
-                )}
-              </div>
-            </div>
+          <div
+            className="min-h-[140px] w-full rounded-md border-2 border-dashed border-gray-400 bg-muted/30 flex flex-wrap gap-5 p-3 items-center justify-center"
+            style={{ aspectRatio: "2/1", maxHeight: 160 }}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (!rollDisabled) return;
+              const handIdx = e.dataTransfer.getData("die-hand-index");
+              if (handIdx !== "") {
+                const i = parseInt(handIdx, 10);
+                if (!Number.isNaN(i)) {
+                  moveToBanked(i);
+                  suppressClickAfterDropToBankedRef.current = true;
+                  setTimeout(() => { suppressClickAfterDropToBankedRef.current = false; }, 150);
+                }
+                return;
+              }
+              const bankedIdx = e.dataTransfer.getData("die-banked-index");
+              if (bankedIdx !== "") {
+                const i = parseInt(bankedIdx, 10);
+                if (!Number.isNaN(i)) {
+                  moveToHand(i);
+                  suppressClickAfterDropToHandRef.current = true;
+                  setTimeout(() => { suppressClickAfterDropToHandRef.current = false; }, 150);
+                }
+              }
+            }}
+          >
+            {diceInHand.map((d, i) => (
+              <Die
+                key={`hand-${i}-${d.face}`}
+                face={d.face}
+                angle={d.angle}
+                offset={d.offset}
+                draggable={rollDisabled}
+                disabled={isGameEnding}
+                onClick={() => moveToBanked(i)}
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("die-hand-index", String(i));
+                  e.dataTransfer.effectAllowed = "move";
+                }}
+              />
+            ))}
           </div>
 
-          {/* Grid + checklist: grid centered in left half, gear list centered in right half */}
-          <div className="game-panel-bg p-4 rounded-lg shadow-lg flex min-h-[400px] overflow-x-auto game-interactive">
-            <div className="w-1/2 flex justify-center items-center min-w-0">
-              <div className="flex gap-2 justify-center min-w-max">
-              {COLUMNS.map((columnValue, colIndex) => {
-                const maxHeight = Math.max(...COLUMNS.map(col => COLUMN_HEIGHTS[col]));
-                const columnHeight = COLUMN_HEIGHTS[columnValue];
-                const spacerHeight = maxHeight - columnHeight;
-                const layoutOffset =
-                  columnValue === 2 || columnValue === 12 ? -1 : columnValue === 7 ? 1 : 0;
-                const visualSpacerHeight = Math.max(0, spacerHeight + layoutOffset);
-                return (
-                  <div key={columnValue} className="flex flex-col items-center relative">
-                    {/* Column label - positioned just above top cell */}
-                    <div 
-                      className={cn(
-                        "text-lg font-bold absolute left-1/2 -translate-x-1/2 z-10",
-                        gridState[colIndex].some(cell => cell === "highlighted") 
-                          ? "text-green-600" 
-                          : "text-black"
-                      )}
-                      style={{ top: `${visualSpacerHeight * 42 - 24}px` }}
-                    >
-                      {columnValue}
-                    </div>
-                    
-                    {/* Grid cells container - cells aligned at bottom */}
-                    <div className="flex flex-col gap-1 relative" style={{ height: `${(maxHeight + layoutOffset) * 42}px` }}>
-                      {/* Spacer to push cells to bottom */}
-                      {visualSpacerHeight > 0 && (
-                        <div style={{ height: `${visualSpacerHeight * 42}px` }} />
-                      )}
-                      
-                      {/* Cells rendered top to bottom (normal order: index 0 at top, last index at bottom) */}
-                      {Array.from({ length: columnHeight }, (_, rowIndex) => {
-                        const cellState = gridState[colIndex][rowIndex];
-                        return (
-                          <div
-                            key={rowIndex}
-                            className={cn(
-                              "w-10 h-10 border-2 border-game-board-border-muted flex items-center justify-center",
-                              cellState === "marked" && "bg-black",
-                              cellState === "highlighted" && "bg-[rgb(55,150,75)]",
-                              cellState === "lost" && "bg-red-500",
-                              cellState === null && "game-panel-bg"
-                            )}
-                          />
-                        );
-                      })}
-                    </div>
+          {strikeFromRoll && (
+            <p className="text-center text-red-600 font-bold text-lg" role="alert">
+              Strike!
+            </p>
+          )}
 
-                    {/* Slot icon - positioned directly below bottom cell */}
-                    <div className={cn(
-                      "mt-1 w-10 h-10 flex items-center justify-center rounded border-2 transition-colors",
-                      gridState[colIndex].some(cell => cell === "highlighted") 
-                        ? "bg-[rgb(55,150,75)] border-[rgb(45,130,65)]" 
-                        : "border-transparent"
-                    )}>
-                      <Image
-                        src={`${CDN_BASE_URL}/${COLUMN_SLOTS[columnValue]}`}
-                        alt={COLUMN_SLOTS[columnValue]}
-                        width={40}
-                        height={40}
-                        className="w-full h-full object-contain"
-                        unoptimized
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-              </div>
-            </div>
-
-            {/* Gear completion checklist - right half, centered */}
-            <div className="w-1/2 flex justify-center items-center min-w-0">
-              <div className="flex flex-col gap-1.5 shrink-0 border border-game-board-border-muted rounded-lg p-3 bg-game-board-panel-muted">
-              {[
-                { key: "helm", label: "Helm", done: gearCompletion.helm },
-                { key: "chestpiece", label: "Chestpiece", done: gearCompletion.chestpiece },
-                { key: "belt", label: "Belt", done: gearCompletion.belt },
-                { key: "shoulders", label: "Shoulders", done: gearCompletion.shoulders },
-                { key: "gauntlets", label: "Gauntlets", done: gearCompletion.gauntlets },
-                { key: "leggings", label: "Leggings", done: gearCompletion.leggings },
-                { key: "boots", label: "Boots", done: gearCompletion.boots },
-              ].map(({ key, label, done }) => (
-                <div key={key} className="flex items-center gap-2">
-                  <div
-                    className={cn(
-                      "w-6 h-6 border-2 flex items-center justify-center shrink-0 rounded",
-                      done ? "bg-green-600 border-green-700 text-white" : "border-game-board-border-muted game-panel-bg"
-                    )}
-                  >
-                    {done && <Check className="w-4 h-4" strokeWidth={3} />}
-                  </div>
-                  <span className="text-sm font-medium text-white">{label}</span>
-                </div>
-              ))}
-              </div>
-            </div>
+          <div className="flex justify-center gap-4">
+            <Button
+              onClick={handleBankDice}
+              disabled={bankDisabled || isGameEnding}
+            >
+              Bank Dice
+            </Button>
+            <Button
+              onClick={handleRoll}
+              disabled={rollDisabled || isGameEnding}
+            >
+              Roll
+            </Button>
+            <Button
+              onClick={handleEndTurn}
+              disabled={isGameEnding}
+            >
+              End Turn
+            </Button>
           </div>
+
+          <div>
+            Banked Score: <strong>{bankedScore}</strong>
+          </div>
+
+          <div
+            className="min-h-[80px] w-full rounded-md border-2 border-dashed border-gray-400 bg-muted/30 flex flex-wrap gap-2 p-3 items-center"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (!rollDisabled) return;
+              const handIdx = e.dataTransfer.getData("die-hand-index");
+              if (handIdx !== "") {
+                const i = parseInt(handIdx, 10);
+                if (!Number.isNaN(i)) {
+                  moveToBanked(i);
+                  suppressClickAfterDropToBankedRef.current = true;
+                  setTimeout(() => { suppressClickAfterDropToBankedRef.current = false; }, 150);
+                }
+                return;
+              }
+              const bankedIdx = e.dataTransfer.getData("die-banked-index");
+              if (bankedIdx !== "") {
+                const i = parseInt(bankedIdx, 10);
+                if (!Number.isNaN(i)) {
+                  moveToHand(i);
+                  suppressClickAfterDropToHandRef.current = true;
+                  setTimeout(() => { suppressClickAfterDropToHandRef.current = false; }, 150);
+                }
+              }
+            }}
+          >
+            {[...bankedDice, ...pendingBanked].map((d, i) => (
+              <Die
+                key={`banked-${i}-${d.face}`}
+                face={d.face}
+                angle={i < bankedDice.length ? 0 : d.angle}
+                offset={i < bankedDice.length ? 0 : d.offset}
+                draggable={rollDisabled && i >= bankedDice.length}
+                disabled={isGameEnding}
+                onClick={() => {
+                  if (i >= bankedDice.length) moveToHand(i - bankedDice.length);
+                }}
+                onDragStart={
+                  rollDisabled && i >= bankedDice.length
+                    ? (e) => {
+                        e.dataTransfer.setData("die-banked-index", String(i - bankedDice.length));
+                        e.dataTransfer.effectAllowed = "move";
+                      }
+                    : undefined
+                }
+              />
+            ))}
+          </div>
+          </div>
+          <ScoringReferenceBox />
         </div>
+      ) : (
+        <p className="text-center text-muted-foreground">
+          Press Play Game to begin the weapon challenge.
+        </p>
       )}
 
-      {/* Rules Dialog - lazy-loaded to avoid loading @radix-ui chunk on initial page request */}
-      <RulesDialog open={showRules} onOpenChange={setShowRules} />
     </div>
   );
 }

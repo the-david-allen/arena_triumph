@@ -5,26 +5,38 @@ import Link from "next/link";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
-import { getTodayPlayCountsByUser } from "@/lib/playcount";
+import { getPlayCountsByUser } from "@/lib/playcount";
 import { cn } from "@/lib/utils";
 
 const CDN_BASE_URL = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/slots";
 
+const TUTORIAL_ID_BY_GEAR: Record<string, string> = {
+  Weapon: "weapon",
+  Helm: "helm",
+  Chestpiece: "chestpiece",
+  Shoulders: "shoulders",
+  Gauntlets: "gauntlets",
+  Belt: "belt",
+  Leggings: "leggings",
+  Boots: "boots",
+};
+
 const gearTypes = [
+  { name: "Weapon", href: "/obtain-gear/weapon", image: "weapon.jpg" },
   { name: "Helm", href: "/obtain-gear/helm", image: "helm.jpg" },
   { name: "Chestpiece", href: "/obtain-gear/chestpiece", image: "chestpiece.jpg" },
-  { name: "Boots", href: "/obtain-gear/boots", image: "boots.jpg" },
-  { name: "Gauntlets", href: "/obtain-gear/gauntlets", image: "gauntlets.jpg" },
-  { name: "Leggings", href: "/obtain-gear/leggings", image: "leggings.jpg" },
-  { name: "Belt", href: "/obtain-gear/belt", image: "belt.jpg" },
   { name: "Shoulders", href: "/obtain-gear/shoulders", image: "shoulders.jpg" },
-  { name: "Weapon", href: "/obtain-gear/weapon", image: "weapon.jpg" },
+  { name: "Gauntlets", href: "/obtain-gear/gauntlets", image: "gauntlets.jpg" },
+  { name: "Belt", href: "/obtain-gear/belt", image: "belt.jpg" },
+  { name: "Leggings", href: "/obtain-gear/leggings", image: "leggings.jpg" },
+  { name: "Boots", href: "/obtain-gear/boots", image: "boots.jpg" },
 ];
 
 export default function ObtainGearPage() {
-  const [playCountsByGear, setPlayCountsByGear] = React.useState<
-    Record<string, number> | null
-  >(null);
+  const [playCounts, setPlayCounts] = React.useState<{
+    today: Record<string, number>;
+    total: Record<string, number>;
+  } | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -34,8 +46,8 @@ export default function ObtainGearPage() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user || cancelled) return;
-      const counts = await getTodayPlayCountsByUser(user.id);
-      if (!cancelled) setPlayCountsByGear(counts);
+      const counts = await getPlayCountsByUser(user.id);
+      if (!cancelled) setPlayCounts(counts);
     }
     load();
     return () => {
@@ -43,7 +55,7 @@ export default function ObtainGearPage() {
     };
   }, []);
 
-  const isLoading = playCountsByGear === null;
+  const isLoading = playCounts === null;
 
   return (
     <div className="space-y-6">
@@ -82,13 +94,18 @@ export default function ObtainGearPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {gearTypes.map((gear) => {
-            const todayCount = playCountsByGear[gear.name] ?? 0;
+            const todayCount = playCounts.today[gear.name] ?? 0;
+            const totalCount = playCounts.total[gear.name] ?? 0;
             const remaining = Math.max(0, 3 - todayCount);
             const disabled = remaining <= 0;
             const label =
               remaining > 0
                 ? `${remaining} plays remaining today`
                 : "No plays remaining today";
+            const shouldShowTutorial = totalCount === 0;
+            const gearHref = shouldShowTutorial
+              ? `${gear.href}?tutorial=1`
+              : gear.href;
 
             const cardContent = (
               <Card
@@ -124,7 +141,7 @@ export default function ObtainGearPage() {
               return <div key={gear.href}>{cardContent}</div>;
             }
             return (
-              <Link key={gear.href} href={gear.href}>
+              <Link key={gear.href} href={gearHref}>
                 {cardContent}
               </Link>
             );

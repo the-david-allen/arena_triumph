@@ -1,0 +1,19 @@
+{
+  "id": "leggings",
+  "version": 1,
+  "steps": [
+    {
+      "id": "intro",
+      "placement": "center",
+      "arrow": "none",
+      "spotlight": false,
+      "content": {
+        "title": "Leggings Mini-Game",
+        "body": "Complete the leggings mini-game to earn new leggings.",
+        "cta": "Got it"
+      },
+      "advanceOnTap": true,
+      "animation": "fade"
+    }
+  ]
+}

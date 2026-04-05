@@ -76,21 +76,19 @@ export async function updatePlayCount(userId: string): Promise<void> {
 
 /**
  * Updates the top 10 scores for a user's weapon game
- * Note: For weapon, lower turns = better score, so we track the 10 lowest scores
- * If the turns qualify (is in top 10 lowest), inserts it and removes any scores above the 10th lowest
+ * Note: For weapon (Shoulders dice game), higher score = better, so we track the 10 highest scores
  */
-export async function updateTopScores(userId: string, turns: number): Promise<void> {
+export async function updateTopScores(userId: string, score: number): Promise<void> {
   const supabase = createClient();
   const gearType = "Weapon";
 
   try {
-    // Query existing scores for this user and gear type, ordered by score ASC (lowest first)
     const { data: existingScores, error: fetchError } = await supabase
       .from("user_top_gear_scores")
       .select("score")
       .eq("user_id", userId)
       .eq("gear_type", gearType)
-      .order("score", { ascending: true });
+      .order("score", { ascending: false });
 
     if (fetchError) {
       console.error("Error fetching top scores:", fetchError);
@@ -99,82 +97,74 @@ export async function updateTopScores(userId: string, turns: number): Promise<vo
 
     const scores = existingScores || [];
     const hasLessThan10 = scores.length < 10;
-    const tenthLowestScore = scores.length >= 10 ? scores[9].score : null;
-    const qualifies = hasLessThan10 || (tenthLowestScore !== null && turns <= tenthLowestScore);
+    const tenthHighestScore = scores.length >= 10 ? scores[9].score : null;
+    const qualifies = hasLessThan10 || (tenthHighestScore !== null && score > tenthHighestScore);
 
-    if (qualifies) {
-      // Insert new score
-      const { error: insertError } = await supabase
+    if (!qualifies) {
+      return;
+    }
+
+    const { error: insertError } = await supabase
+      .from("user_top_gear_scores")
+      .insert({
+        user_id: userId,
+        gear_type: gearType,
+        score,
+        created_at: new Date().toISOString(),
+      });
+
+    if (insertError) {
+      console.error("Error inserting top score:", insertError);
+      throw new Error(`Failed to insert top score: ${insertError.message}`);
+    }
+
+    const { data: allScores, error: refetchError } = await supabase
+      .from("user_top_gear_scores")
+      .select("score, created_at")
+      .eq("user_id", userId)
+      .eq("gear_type", gearType)
+      .order("score", { ascending: false });
+
+    if (refetchError) {
+      console.error("Error refetching top scores:", refetchError);
+      return;
+    }
+
+    if (allScores && allScores.length > 10) {
+      const tenthScore = allScores[9].score;
+      const { error: deleteError } = await supabase
         .from("user_top_gear_scores")
-        .insert({
-          user_id: userId,
-          gear_type: gearType,
-          score: turns,
-          created_at: new Date().toISOString(),
-        });
-
-      if (insertError) {
-        console.error("Error inserting top score:", insertError);
-        throw new Error(`Failed to insert top score: ${insertError.message}`);
-      }
-
-      // Query again to get all scores (including the new one)
-      const { data: allScores, error: refetchError } = await supabase
-        .from("user_top_gear_scores")
-        .select("score, created_at")
+        .delete()
         .eq("user_id", userId)
         .eq("gear_type", gearType)
-        .order("score", { ascending: true });
+        .lt("score", tenthScore);
 
-      if (refetchError) {
-        console.error("Error refetching top scores:", refetchError);
-        // Don't throw - we already inserted the score, just log the error
-        return;
-      }
-
-      // If more than 10 scores exist, delete all scores above the 10th lowest
-      if (allScores && allScores.length > 10) {
-        const tenthScore = allScores[9].score;
-        
-        // Delete all scores that are greater than the 10th lowest
-        const { error: deleteError } = await supabase
-          .from("user_top_gear_scores")
-          .delete()
-          .eq("user_id", userId)
-          .eq("gear_type", gearType)
-          .gt("score", tenthScore);
-
-        if (deleteError) {
-          console.error("Error deleting excess scores:", deleteError);
-          // Don't throw - the score was inserted, just log the error
-        }
+      if (deleteError) {
+        console.error("Error deleting excess scores:", deleteError);
       }
     }
   } catch (error) {
     console.error("Error in updateTopScores:", error);
-    // Don't throw - this is a non-critical operation
   }
 }
 
 /**
- * Gets the reward rarity based on turns taken
- * Queries weapon_rewards_lookup to find the lowest max_score >= turns
- * (Since lower turns is better, we want the lowest max_score that qualifies)
+ * Gets the reward rarity based on score (points-based; higher score = better)
+ * Queries weapon_rewards_lookup (min_score) to find the highest min_score <= score
  */
-export async function getRewardRarity(turns: number): Promise<string | null> {
+export async function getRewardRarity(score: number): Promise<string | null> {
   const supabase = createClient();
 
   try {
     const { data, error } = await supabase
       .from("weapon_rewards_lookup")
       .select("rarity")
-      .gte("max_score", turns)
-      .order("max_score", { ascending: true })
+      .lte("min_score", score)
+      .order("min_score", { ascending: false })
       .limit(1)
       .single();
 
     if (error) {
-      // If no rows found (PGRST116), that's okay - turns don't qualify
       if (error.code === "PGRST116") {
         return null;
       }

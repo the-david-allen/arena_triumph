@@ -1,0 +1,51 @@
+{
+  "id": "belt",
+  "version": 1,
+  "steps": [
+    {
+      "id": "invalid-2-2",
+      "placement": "center",
+      "arrow": "none",
+      "spotlight": false,
+      "content": {
+        "title": "The 2 2 Rule",
+        "body": "You cannot have 2 black runs without at least one X separating them. The second row (clue 2 2) is shown incorrectly below - four consecutive black cells. Fix it by placing an X between the two runs. Complete row 2 correctly."
+      },
+      "advanceOn": {
+        "type": "event",
+        "event": "belt-tutorial-row-2-complete"
+      },
+      "animation": "fade"
+    },
+    {
+      "id": "clue-3-guidance",
+      "placement": "center",
+      "arrow": "none",
+      "spotlight": false,
+      "content": {
+        "title": "Clue 3: Overlap Inference",
+        "body": "Each number indicates how many black cells in a run. For clue 3 in a 5-cell row: if the run starts at the beginning, cells 0-2 are black; if it ends at the end, cells 2-4 are black. In both cases the third square is black - so you can mark it. Complete row 3."
+      },
+      "advanceOn": {
+        "type": "event",
+        "event": "belt-tutorial-row-3-complete"
+      },
+      "animation": "fade"
+    },
+    {
+      "id": "finish-puzzle",
+      "placement": "center",
+      "arrow": "none",
+      "spotlight": false,
+      "content": {
+        "title": "Finish the Puzzle",
+        "body": "Now complete the rest of the puzzle using the row and column clues."
+      },
+      "advanceOn": {
+        "type": "event",
+        "event": "belt-tutorial-puzzle-complete"
+      },
+      "animation": "fade"
+    }
+  ]
+}

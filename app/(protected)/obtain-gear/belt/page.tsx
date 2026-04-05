@@ -3,13 +3,6 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   updatePlayCount,
   getCurrentUserId,
   updateTopScores,
@@ -20,10 +13,15 @@ import {
 import { checkUserHasItem, addXpToUser, RARITY_XP } from "@/lib/inventory";
 import { generateBeltPuzzle } from "@/lib/belt-nonogram-generator";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
+import { ENDGAME_REWARD_DELAY_MS } from "@/lib/game-constants";
 import { BACKGROUND_MUSIC_VOLUME } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { TutorialButton } from "@/components/tutorial/TutorialButton";
+import { BeltTutorialView } from "@/components/belt/BeltTutorialView";
+import { useTutorial } from "@/lib/tutorial/use-tutorial";
+import { useGearPageTutorialIntent } from "@/lib/tutorial/use-gear-page-tutorial-intent";
 
 const GRID_SIZE = 12;
 
@@ -67,6 +65,17 @@ function getInitialPlayerGrid(
 
 export default function BeltPage() {
   const router = useRouter();
+  const {
+    startTutorial,
+    isActive,
+    activeTutorialId,
+    currentStep,
+    currentStepIndex,
+    emit,
+    goBackStep,
+    skipTutorial,
+  } = useTutorial();
+  useGearPageTutorialIntent("belt", startTutorial);
   const [isGameActive, setIsGameActive] = React.useState(false);
   const [puzzle, setPuzzle] = React.useState<boolean[][] | null>(null);
   const [playerGrid, setPlayerGrid] = React.useState<CellState[][]>(
@@ -87,7 +96,6 @@ export default function BeltPage() {
   } | null>(null);
   const [rewardXp, setRewardXp] = React.useState<number | null>(null);
   const [finalSeconds, setFinalSeconds] = React.useState(0);
-  const [showRules, setShowRules] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
   const [dragState, setDragState] = React.useState<"green" | "x" | null>(null);
   const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
@@ -272,9 +280,6 @@ export default function BeltPage() {
     e.preventDefault();
     const isRightClick = e.button === 2 || e.ctrlKey || e.metaKey;
     const currentState = playerGrid[row][col];
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'belt/page.tsx:handleCellMouseDown',message:'mouseDown',data:{row,col,button:e.button,isRightClick,currentState:currentState===null?'null':currentState},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
-    // #endregion
 
     // If cell is already marked: left-click unmarks here; right-click unmarks in onContextMenu (handleCellClick)
     if (currentState === true || currentState === false) {
@@ -304,9 +309,6 @@ export default function BeltPage() {
       rightClickGestureRef.current = true;
       // Set before any other event (e.g. click can fire before contextmenu or mouseUp); so the next click is ignored and won't unmark
       ignoreNextClickRef.current = true;
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'belt/page.tsx:mouseDown set X',message:'rightClick set refs and will set cell to X',data:{row,col},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
     }
 
     // Set initial cell
@@ -339,10 +341,6 @@ export default function BeltPage() {
   };
 
   const handleCellMouseUp = () => {
-    // #region agent log
-    const hadRightGesture = rightClickGestureRef.current;
-    fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'belt/page.tsx:handleCellMouseUp',message:'mouseUp',data:{rightClickGestureRef:hadRightGesture,settingIgnoreNextClick:hadRightGesture},timestamp:Date.now(),hypothesisId:'H2_H5'})}).catch(()=>{});
-    // #endregion
     // Right-click release is handled in document mouseup (capture); here we only clear drag state
     setIsDragging(false);
     setDragState(null);
@@ -434,7 +432,7 @@ export default function BeltPage() {
     setFinalSeconds(timer);
 
     // Pause for 2 seconds
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await new Promise((resolve) => setTimeout(resolve, ENDGAME_REWARD_DELAY_MS));
 
     try {
       const userId = await getCurrentUserId();
@@ -494,9 +492,17 @@ export default function BeltPage() {
     }
   }, [showCompletionScreen, rewardBelt, rewardXp]);
 
-  const rulesText = `You have a grid of squares, which must be either filled in dark green or marked with X. Beside each row of the grid are listed the lengths of the runs of dark green squares on that row. Above each column are listed the lengths of the runs of dark green squares in that column. Your aim is to find all dark green squares.
-
-Left click on a square to make it dark green. Long-press or right-click to mark with X. Click and drag to mark more than one square. Good luck!`;
+  if (isActive && activeTutorialId === "belt" && currentStep) {
+    return (
+      <BeltTutorialView
+        currentStep={currentStep}
+        stepIndex={currentStepIndex}
+        emit={emit}
+        goBackStep={goBackStep}
+        skipTutorial={skipTutorial}
+      />
+    );
+  }
 
   // Show completion screen
   if (showCompletionScreen) {
@@ -559,9 +565,7 @@ Left click on a square to make it dark green. Long-press or right-click to mark 
             ? "No plays remaining today"
             : "Play Game"}
         </Button>
-        <Button variant="outline" onClick={() => setShowRules(true)}>
-          Rules
-        </Button>
+        <TutorialButton tutorialId="belt" variant="outline" />
       </div>
 
       {generationError && (
@@ -690,11 +694,6 @@ Left click on a square to make it dark green. Long-press or right-click to mark 
                                   longPressOccurredRef.current = false;
                                   return;
                                 }
-                                // #region agent log
-                                const ign = ignoreNextClickRef.current;
-                                const sameCell = mouseDownCellRef.current?.row === rowIndex && mouseDownCellRef.current?.col === colIndex;
-                                fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'belt/page.tsx:onClick',message:'click',data:{rowIndex,colIndex,button:e.button,ignoreNextClick:ign,sameCell,cellState:cellState===null?'null':cellState},timestamp:Date.now(),hypothesisId:'H3_H5'})}).catch(()=>{});
-                                // #endregion
                                 // Ignore right-click (handled by onContextMenu)
                                 if (e.button === 2) return;
                                 // Short window after right-click end: suppress any click so no cell we just marked gets unmarked (handles ordering/target quirks)
@@ -738,9 +737,6 @@ Left click on a square to make it dark green. Long-press or right-click to mark 
                                 }
                                 const refMatch = rightClickSetXRef.current?.row === rowIndex && rightClickSetXRef.current?.col === colIndex;
                                 const inSet = rightClickXCellsRef.current.has(`${rowIndex},${colIndex}`);
-                                // #region agent log
-                                fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'belt/page.tsx:onContextMenu',message:'contextMenu',data:{rowIndex,colIndex,cellState:cellState===null?'null':cellState,refMatch,inSet,refCell:rightClickSetXRef.current},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
-                                // #endregion
                                 // We just set this cell to X in mouseDown or drag (right-click): keep it X; ignore the next click (often fires before mouseUp and would unmark)
                                 if (refMatch || inSet) {
                                   ignoreNextClickRef.current = true;
@@ -782,17 +778,6 @@ Left click on a square to make it dark green. Long-press or right-click to mark 
         </div>
       )}
 
-      {/* Rules Dialog */}
-      <Dialog open={showRules} onOpenChange={setShowRules}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Game Rules</DialogTitle>
-            <DialogDescription className="whitespace-pre-line">
-              {rulesText}
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

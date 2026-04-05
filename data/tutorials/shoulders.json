@@ -1,0 +1,19 @@
+{
+  "id": "shoulders",
+  "version": 1,
+  "steps": [
+    {
+      "id": "intro",
+      "placement": "center",
+      "arrow": "none",
+      "spotlight": false,
+      "content": {
+        "title": "Shoulders Mini-Game",
+        "body": "Complete the shoulders mini-game to earn new shoulder armor.",
+        "cta": "Got it"
+      },
+      "advanceOnTap": true,
+      "animation": "fade"
+    }
+  ]
+}

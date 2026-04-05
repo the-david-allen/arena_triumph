@@ -2,13 +2,6 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { AffinityStrengthsDialog } from "@/components/AffinityStrengthsDialog";
 import {
   fetchAllAffinities,
@@ -22,10 +15,14 @@ import {
   type Affinity,
 } from "@/lib/leggings-game";
 import { checkUserHasItem, addXpToUser, RARITY_XP } from "@/lib/inventory";
+import { ENDGAME_REWARD_DELAY_MS } from "@/lib/game-constants";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { TutorialButton } from "@/components/tutorial/TutorialButton";
+import { useTutorial } from "@/lib/tutorial/use-tutorial";
+import { useGearPageTutorialIntent } from "@/lib/tutorial/use-gear-page-tutorial-intent";
 
 const CDN_BASE_URL = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/affinities";
 
@@ -43,6 +40,8 @@ interface RoundData {
 
 export default function LeggingsPage() {
   const router = useRouter();
+  const { startTutorial } = useTutorial();
+  useGearPageTutorialIntent("leggings", startTutorial);
   const [isGameActive, setIsGameActive] = React.useState(false);
   const [answer, setAnswer] = React.useState<Affinity[]>([]);
   const [rounds, setRounds] = React.useState<RoundData[]>([]);
@@ -261,7 +260,7 @@ export default function LeggingsPage() {
     setIsGameEnding(true); // Disable interactions but keep game board visible
     
     // Pause for 2 seconds (without allowing further button presses)
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, ENDGAME_REWARD_DELAY_MS));
 
     try {
       const userId = await getCurrentUserId();
@@ -316,12 +315,6 @@ export default function LeggingsPage() {
       audio.play().catch(() => {});
     }
   }, [showCompletionScreen, rewardLeggings, rewardXp]);
-
-  const rulesText = `A random set of 5 Affinities has been chosen as the answer.  Take a guess and learn how many affinities you guessed are an exact match and how many match but in the wrong location.
-
-Each round, a random guess slot is highlighted. You will learn either how many affinities in the answer that slot's affinity is strong against, or how many it is weak against, alternating each round.
-
-Try to guess in as few rounds as possible.  Good luck!`;
 
   // Show completion screen
   if (showCompletionScreen) {
@@ -378,9 +371,7 @@ Try to guess in as few rounds as possible.  Good luck!`;
             ? "No plays remaining today"
             : "Play Game"}
         </Button>
-        <Button variant="outline" onClick={() => setShowRules(true)}>
-          Rules
-        </Button>
+        <TutorialButton tutorialId="leggings" variant="outline" />
       </div>
 
       {/* Game board */}
@@ -561,18 +552,6 @@ Try to guess in as few rounds as possible.  Good luck!`;
           ))}
         </div>
       )}
-
-      {/* Rules Dialog */}
-      <Dialog open={showRules} onOpenChange={setShowRules}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Game Rules</DialogTitle>
-            <DialogDescription className="whitespace-pre-line">
-              {rulesText}
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
 
       <AffinityStrengthsDialog
         open={showStrengths}

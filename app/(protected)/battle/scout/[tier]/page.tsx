@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { TutorialButton } from "@/components/tutorial/TutorialButton";
 import { ScoutingGame } from "@/components/scouting/ScoutingGame";
 import {
   ResultPopup,
@@ -110,9 +111,12 @@ export default function ScoutPage() {
 
       {phase === "pregame" && (
         <div className="flex flex-col items-center gap-6 pt-8">
-          <Button size="lg" onClick={handleBeginScouting}>
-            Begin Scouting
-          </Button>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Button size="lg" onClick={handleBeginScouting}>
+              Begin Scouting
+            </Button>
+            <TutorialButton tutorialId="scouting" variant="outline" size="lg" />
+          </div>
           <p className="max-w-md text-center text-sm text-muted-foreground">
             Within the allotted time, determine which Weapon, Affinity,
             Number, and Armor belongs in each spot.

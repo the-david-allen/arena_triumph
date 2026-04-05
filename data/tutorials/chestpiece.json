@@ -1,0 +1,19 @@
+{
+  "id": "chestpiece",
+  "version": 1,
+  "steps": [
+    {
+      "id": "intro",
+      "placement": "center",
+      "arrow": "none",
+      "spotlight": false,
+      "content": {
+        "title": "Chestpiece Mini-Game",
+        "body": "Place cards on the armor grid to maximize your score. Match colors for line bonuses, and place cards in matching slots for slot bonuses.",
+        "cta": "Got it"
+      },
+      "advanceOnTap": true,
+      "animation": "fade"
+    }
+  ]
+}

@@ -40,20 +40,6 @@ interface CardProps {
 }
 
 export function Card({ card, isHighlighted = false, slotBonusActive = false, isDragging = false, onDragStart, enableTouchDrag = false, onTouchDrop, className }: CardProps) {
-  // #region agent log
-  React.useEffect(() => {
-    console.log('[DEBUG] Card rendered:', { 
-      card_id: card.card_id, 
-      color: card.color, 
-      value: card.value, 
-      slot: card.slot,
-      slot_bonus: card.slot_bonus,
-      horizontal_bonus: card.horizontal_bonus,
-      vertical_bonus: card.vertical_bonus
-    });
-  }, [card]);
-  // #endregion
-
   const touchDragRef = React.useRef<{
     touchId: number;
     startX: number;
@@ -143,13 +129,7 @@ export function Card({ card, isHighlighted = false, slotBonusActive = false, isD
   };
   
   const backgroundColor = getBackgroundColor(card.color);
-  
-  // #region agent log
-  console.log('[DEBUG] Card color processing:', { 
-    originalColor: card.color, 
-    processedColor: backgroundColor 
-  });
-  // #endregion
+
   // Use black text as specified
   const textColor = "text-black";
 

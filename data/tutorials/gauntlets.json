@@ -1,0 +1,19 @@
+{
+  "id": "gauntlets",
+  "version": 1,
+  "steps": [
+    {
+      "id": "intro",
+      "placement": "center",
+      "arrow": "none",
+      "spotlight": false,
+      "content": {
+        "title": "Gauntlets Mini-Game",
+        "body": "Complete the gauntlets mini-game to earn new gauntlets.",
+        "cta": "Got it"
+      },
+      "advanceOnTap": true,
+      "animation": "fade"
+    }
+  ]
+}

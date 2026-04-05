@@ -1,0 +1,19 @@
+{
+  "id": "scouting",
+  "version": 1,
+  "steps": [
+    {
+      "id": "intro",
+      "placement": "center",
+      "arrow": "none",
+      "spotlight": false,
+      "content": {
+        "title": "Scouting",
+        "body": "Use clues to deduce which weapon, affinity, dice, and armor belong in each column. Left-click correct items, right-click to eliminate wrong ones.",
+        "cta": "Got it"
+      },
+      "advanceOnTap": true,
+      "animation": "fade"
+    }
+  ]
+}

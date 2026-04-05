@@ -3,13 +3,6 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   updatePlayCount,
   getCurrentUserId,
   updateTopScores,
@@ -19,10 +12,14 @@ import {
 } from "@/lib/boots-game";
 import { checkUserHasItem, addXpToUser, RARITY_XP } from "@/lib/inventory";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
+import { ENDGAME_REWARD_DELAY_MS } from "@/lib/game-constants";
 import { BACKGROUND_MUSIC_VOLUME } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { TutorialButton } from "@/components/tutorial/TutorialButton";
+import { useTutorial } from "@/lib/tutorial/use-tutorial";
+import { useGearPageTutorialIntent } from "@/lib/tutorial/use-gear-page-tutorial-intent";
 
 const BOOTS_BACKGROUND_MUSIC_URL =
   "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/sounds/boots_background.mp3";
@@ -31,9 +28,6 @@ const GRID_SIZE = 20;
 const NUM_MINES = 45;
 const LOSS_SCORE = 9999;
 const MYSTIC_ICON_URL = "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/affinities/mystic.jpg";
-
-const RULES_TEXT =
-  "45 mystic explosions are hidden throughout this grid.  Press or click a cell to reveal what lies beneath.  A number tells you how many mystic explosions touch that cell.  Long-press or right-click to mark cells that you know have mystic explosions, but do not detonate them or the game will end.  Complete the grid by marking all mystic explosions as fast as you can. Good luck!";
 
 function getNeighborKeys(r: number, c: number): string[] {
   const keys: string[] = [];
@@ -122,6 +116,8 @@ function floodReveal(
 }
 
 export default function BootsPage() {
+  const { startTutorial } = useTutorial();
+  useGearPageTutorialIntent("boots", startTutorial);
   const [isGameActive, setIsGameActive] = React.useState(false);
   const [mineMap, setMineMap] = React.useState<boolean[][] | null>(null);
   const [adjacentCounts, setAdjacentCounts] = React.useState<number[][] | null>(null);
@@ -143,7 +139,6 @@ export default function BootsPage() {
   } | null>(null);
   const [rewardXp, setRewardXp] = React.useState<number | null>(null);
   const [finalSeconds, setFinalSeconds] = React.useState(0);
-  const [showRules, setShowRules] = React.useState(false);
   const [todayPlayCount, setTodayPlayCount] = React.useState<number | null>(null);
   const timerIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   const bootsMusicRef = React.useRef<HTMLAudioElement | null>(null);
@@ -210,7 +205,7 @@ export default function BootsPage() {
   handleGameEndRef.current = async (scoreSeconds: number) => {
     setIsGameEnding(true);
     setFinalSeconds(scoreSeconds);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await new Promise((resolve) => setTimeout(resolve, ENDGAME_REWARD_DELAY_MS));
     try {
       const userId = await getCurrentUserId();
       if (userId) {
@@ -450,9 +445,7 @@ export default function BootsPage() {
             ? "No plays remaining today"
             : "Play Game"}
         </Button>
-        <Button variant="outline" onClick={() => setShowRules(true)}>
-          Rules
-        </Button>
+        <TutorialButton tutorialId="boots" variant="outline" />
       </div>
 
       {isGameActive && (
@@ -539,16 +532,6 @@ export default function BootsPage() {
         </div>
       )}
 
-      <Dialog open={showRules} onOpenChange={setShowRules}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Game Rules</DialogTitle>
-            <DialogDescription className="whitespace-pre-line">
-              {RULES_TEXT}
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

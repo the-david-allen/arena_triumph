@@ -40,8 +40,8 @@ export const DAILY_REWARDS_GEAR_SLOTS: GearSlotConfig[] = [
   { name: "Gauntlets", scoreLabel: "seconds", topScoreOrder: "desc" },
   { name: "Leggings", scoreLabel: "guesses", topScoreOrder: "asc" },
   { name: "Belt", scoreLabel: "seconds", topScoreOrder: "asc" },
-  { name: "Shoulders", scoreLabel: "points", topScoreOrder: "desc" },
-  { name: "Weapon", scoreLabel: "turns", topScoreOrder: "asc" },
+  { name: "Shoulders", scoreLabel: "turns", topScoreOrder: "asc" },
+  { name: "Weapon", scoreLabel: "points", topScoreOrder: "desc" },
 ];
 
 export interface SlotDailyState {

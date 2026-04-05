@@ -6,39 +6,14 @@ import type { CardData } from "@/components/chestpiece/Card";
  */
 export async function fetchChestGameCards(): Promise<CardData[]> {
   const supabase = createClient();
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chestpiece-game.ts:7',message:'fetchChestGameCards called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
   const { data, error } = await supabase
     .from("chest_game_lookup")
     .select("*");
-  // #region agent log
-  console.log('[DEBUG] Supabase query result:', { 
-    data: data, 
-    dataType: Array.isArray(data) ? 'array' : typeof data,
-    dataLength: Array.isArray(data) ? data.length : 'not-array',
-    hasError: !!error, 
-    errorMessage: error?.message || null,
-    errorCode: error?.code || null,
-    errorDetails: error || null
-  });
-  fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chestpiece-game.ts:12',message:'Supabase query result',data:{dataLength:data?.length||0,hasError:!!error,errorMessage:error?.message||null,firstCard:data?.[0]||null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
 
   if (error) {
     console.error("Error fetching chest game cards:", error);
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chestpiece-game.ts:16',message:'Error in fetchChestGameCards',data:{error:error.message,errorCode:error.code},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     throw new Error(`Failed to fetch cards: ${error.message}`);
   }
-
-  // #region agent log
-  if (!data || (Array.isArray(data) && data.length === 0)) {
-    console.warn('[DEBUG] No cards found in chest_game_lookup table. Table may be empty or RLS policies may be blocking access.');
-    fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chestpiece-game.ts:36',message:'Empty cards result',data:{dataIsNull:data===null,dataIsUndefined:data===undefined,isArray:Array.isArray(data),length:Array.isArray(data)?data.length:'not-array'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  }
-  // #endregion
 
   if (!data || (Array.isArray(data) && data.length === 0)) {
     throw new Error("No cards found in the database. Please ensure the chest_game_lookup table has data.");

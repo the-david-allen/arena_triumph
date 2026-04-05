@@ -1,0 +1,73 @@
+{
+  "id": "main-game",
+  "version": 1,
+  "steps": [
+    {
+      "id": "welcome",
+      "placement": "center",
+      "arrow": "none",
+      "spotlight": false,
+      "content": {
+        "title": "Welcome to Arena Triumph",
+        "body": "Gear up, battle bosses, and rise through the tiers. Let's tour the basics.",
+        "cta": "Let's go"
+      },
+      "advanceOnTap": true,
+      "animation": "fade"
+    },
+    {
+      "id": "game-loop",
+      "targetId": "game-loop-image",
+      "placement": "bottom",
+      "arrow": "top",
+      "spotlight": true,
+      "content": {
+        "title": "The Game Loop",
+        "body": "Obtain gear through mini-games, manage your inventory, scout bosses, then battle them in the Arena.",
+        "cta": "Next"
+      },
+      "advanceOnTap": true,
+      "animation": "fade"
+    },
+    {
+      "id": "daily-rewards",
+      "targetId": "daily-rewards-button",
+      "placement": "top",
+      "arrow": "bottom",
+      "spotlight": true,
+      "content": {
+        "title": "Daily Rewards",
+        "body": "Claim rewards each day. Check back regularly for bonuses."
+      },
+      "advanceOn": { "type": "event", "event": "main-landing-daily-rewards-clicked" },
+      "animation": "fade"
+    },
+    {
+      "id": "affinity-reference",
+      "targetId": "affinity-reference-button",
+      "placement": "top",
+      "arrow": "bottom",
+      "spotlight": true,
+      "content": {
+        "title": "Affinity Reference",
+        "body": "Learn which affinities are strong or weak against others. Use this to plan your gear and battles."
+      },
+      "advanceOn": { "type": "event", "event": "main-landing-affinity-clicked" },
+      "animation": "fade"
+    },
+    {
+      "id": "navigation",
+      "targetId": "nav-bar",
+      "placement": "bottom",
+      "arrow": "top",
+      "spotlight": true,
+      "content": {
+        "title": "Navigation",
+        "body": "Battle: fight bosses. Obtain Gear: play mini-games for new gear. Manage Inventory: equip and organize. Inspect: view your loadout.",
+        "cta": "Done"
+      },
+      "advanceOnTap": true,
+      "animation": "fade"
+    }
+  ]
+}

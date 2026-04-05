@@ -1,0 +1,19 @@
+{
+  "id": "battle",
+  "version": 1,
+  "steps": [
+    {
+      "id": "intro",
+      "placement": "center",
+      "arrow": "none",
+      "spotlight": false,
+      "content": {
+        "title": "Battle",
+        "body": "Time your attacks when the line is in the green zone for maximum damage. Click (or tap) in each green zone as the line passes through.",
+        "cta": "Got it"
+      },
+      "advanceOnTap": true,
+      "animation": "fade"
+    }
+  ]
+}

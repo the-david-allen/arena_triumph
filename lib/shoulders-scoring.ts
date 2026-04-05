@@ -34,11 +34,16 @@ export interface ScoringResult {
   score: number;
 }
 
+export interface ComputeScoreOptions {
+  /** When true, every die must be used by the scoring rules (no leftover faces). */
+  requireAllDiceScored?: boolean;
+}
+
 /**
  * Computes the best score for a set of dice faces.
  * Uses greedy application of combos in score-descending order.
  */
-export function computeScore(faces: DieFace[]): ScoringResult {
+export function computeScore(faces: DieFace[], options?: ComputeScoreOptions): ScoringResult {
   const count: Record<DieFace, number> = {
     Armor: 0,
     Weapon: 0,
@@ -143,8 +148,12 @@ export function computeScore(faces: DieFace[]): ScoringResult {
   score += Math.min(c("Armor"), 2) * 50;
   use("Armor", Math.min(c("Armor"), 2));
 
+  const allDiceScored = DIE_FACES.every((f) => count[f] === 0);
+  const requireAll = options?.requireAllDiceScored === true;
+  const valid = score > 0 && (!requireAll || allDiceScored);
+
   return {
-    valid: score > 0,
+    valid,
     score,
   };
 }

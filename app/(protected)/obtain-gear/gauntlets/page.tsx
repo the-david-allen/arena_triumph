@@ -4,13 +4,6 @@ import * as React from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   addToInventory,
   getCurrentUserId,
   getRandomGauntletsByRarity,
@@ -23,6 +16,9 @@ import { checkUserHasItem, addXpToUser, RARITY_XP } from "@/lib/inventory";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
 import { BACKGROUND_MUSIC_VOLUME } from "@/lib/sounds";
 import { useRouter } from "next/navigation";
+import { TutorialButton } from "@/components/tutorial/TutorialButton";
+import { useTutorial } from "@/lib/tutorial/use-tutorial";
+import { useGearPageTutorialIntent } from "@/lib/tutorial/use-gear-page-tutorial-intent";
 
 const GAUNTLETS_BACKGROUND_MUSIC_URL =
   "https://pub-0b8bdb0f1981442e9118b343565c1579.r2.dev/sounds/gauntlets_background.mp3";
@@ -546,7 +542,8 @@ function loadImages(): Promise<LoadedImages> {
 
 /* ═══════════════════ React Component ═════════════════════════════ */
 export default function GauntletsPage() {
-  const [showRules, setShowRules] = React.useState(false);
+  const { startTutorial } = useTutorial();
+  useGearPageTutorialIntent("gauntlets", startTutorial);
   const [showCompletionScreen, setShowCompletionScreen] = React.useState(false);
   const [finalSeconds, setFinalSeconds] = React.useState(0);
   const [rewardGauntlets, setRewardGauntlets] = React.useState<GauntletsReward | null>(null);
@@ -839,9 +836,6 @@ export default function GauntletsPage() {
     setIsGameActive(false);
   }, [stopLoop]);
 
-  const rulesText =
-    "Hello Tavernkeeper.  Fill the mugs and provide the patrons with their drinks and do not let them get to the kegs while still thirsty.  Good luck!";
-
   /* Tada sound on completion */
   React.useEffect(() => {
     if (showCompletionScreen && (rewardGauntlets || rewardXp !== null)) {
@@ -907,9 +901,7 @@ export default function GauntletsPage() {
             ? "No plays remaining today"
             : "Play Game"}
         </Button>
-        <Button variant="outline" onClick={() => setShowRules(true)}>
-          Rules
-        </Button>
+        <TutorialButton tutorialId="gauntlets" variant="outline" />
       </div>
 
       {isGameActive ? (
@@ -930,16 +922,6 @@ export default function GauntletsPage() {
         </div>
       )}
 
-      <Dialog open={showRules} onOpenChange={setShowRules}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Game Rules</DialogTitle>
-            <DialogDescription className="whitespace-pre-line">
-              {rulesText}
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

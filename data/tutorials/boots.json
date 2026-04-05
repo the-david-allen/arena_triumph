@@ -1,0 +1,19 @@
+{
+  "id": "boots",
+  "version": 1,
+  "steps": [
+    {
+      "id": "intro",
+      "placement": "center",
+      "arrow": "none",
+      "spotlight": false,
+      "content": {
+        "title": "Boots Mini-Game",
+        "body": "Complete the boots mini-game to earn new boots.",
+        "cta": "Got it"
+      },
+      "advanceOnTap": true,
+      "animation": "fade"
+    }
+  ]
+}

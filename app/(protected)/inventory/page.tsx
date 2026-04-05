@@ -14,6 +14,14 @@ import {
 import { cn } from "@/lib/utils";
 import { AffinityStrengthsDialog } from "@/components/AffinityStrengthsDialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { fetchAllAffinities, type Affinity } from "@/lib/leggings-game";
+import {
   GEAR_SLOTS,
   getAffinityIconUrl,
   RARITY_XP,
@@ -45,8 +53,24 @@ export default function InventoryPage() {
   } | null>(null);
   const [showRarityLookup, setShowRarityLookup] = React.useState(false);
   const [showAffinityReference, setShowAffinityReference] = React.useState(false);
+  const [affinityFilter, setAffinityFilter] = React.useState<string | null>(null);
+  const [allAffinities, setAllAffinities] = React.useState<Affinity[]>([]);
 
   const userIdRef = React.useRef<string | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    fetchAllAffinities()
+      .then((a) => {
+        if (!cancelled) setAllAffinities(a);
+      })
+      .catch((err) => {
+        if (!cancelled) console.error("Failed to load affinities:", err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const RARITY_DISPLAY: { name: string; color: string }[] = [
     { name: "Mythic", color: "rgb(230, 0, 38)" },
@@ -227,11 +251,6 @@ export default function InventoryPage() {
     Leggings: "Leggings",
     Boots: "Boots",
   };
-  const count = inventoryItems.length;
-  const slotLabel = count === 1 ? selectedSlot : (SLOT_PLURAL[selectedSlot] ?? `${selectedSlot}s`);
-  const inventoryLabel = `Inventory: ${count} ${slotLabel}`;
-  const isInventoryLabelWarning = inventoryItems.length >= 20;
-
   const sortedInventoryItems = React.useMemo(() => {
     return [...inventoryItems].sort((a, b) => {
       if (a.is_equipped) return -1;
@@ -239,6 +258,21 @@ export default function InventoryPage() {
       return (b.details.strength ?? 0) - (a.details.strength ?? 0);
     });
   }, [inventoryItems]);
+
+  const filteredAndSortedItems = React.useMemo(() => {
+    if (!affinityFilter) return sortedInventoryItems;
+    return sortedInventoryItems.filter(
+      (item) =>
+        item.details.primary_affinity === affinityFilter ||
+        item.details.secondary_affinity === affinityFilter
+    );
+  }, [sortedInventoryItems, affinityFilter]);
+
+  const displayCount = filteredAndSortedItems.length;
+  const slotLabel =
+    displayCount === 1 ? selectedSlot : (SLOT_PLURAL[selectedSlot] ?? `${selectedSlot}s`);
+  const inventoryLabel = `Inventory: ${displayCount} ${slotLabel}`;
+  const isInventoryLabelWarning = inventoryItems.length >= 20;
 
   if (isLoading) {
     return (
@@ -404,16 +438,63 @@ export default function InventoryPage() {
 
           {/* Bottom: Inventory grid */}
           <div className="rounded-lg border p-4 shadow-sm bg-[var(--inventory-panel-bg)] text-[var(--inventory-panel-fg)]">
-            <p
-              className={cn(
-                "mb-3 font-medium",
-                isInventoryLabelWarning && "font-bold text-destructive"
-              )}
-            >
-              {inventoryLabel}
-            </p>
+            <div className="mb-3 flex items-center justify-between gap-4">
+              <p
+                className={cn(
+                  "font-medium",
+                  isInventoryLabelWarning && "font-bold text-destructive"
+                )}
+              >
+                {inventoryLabel}
+              </p>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    {affinityFilter ? (
+                      <span className="flex items-center gap-2">
+                        <Image
+                          src={getAffinityIconUrl(affinityFilter)}
+                          alt={affinityFilter}
+                          width={20}
+                          height={20}
+                          className="rounded object-contain"
+                          unoptimized
+                        />
+                        {affinityFilter}
+                      </span>
+                    ) : (
+                      "Filter by affinity"
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setAffinityFilter(null)}>
+                    All affinities
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {allAffinities.map((affinity) => (
+                    <DropdownMenuItem
+                      key={affinity.id}
+                      onSelect={() => setAffinityFilter(affinity.affinity_name as string)}
+                    >
+                      <span className="flex items-center gap-2">
+                        <Image
+                          src={getAffinityIconUrl(affinity.affinity_name as string)}
+                          alt={affinity.affinity_name as string}
+                          width={20}
+                          height={20}
+                          className="rounded object-contain"
+                          unoptimized
+                        />
+                        {affinity.affinity_name}
+                      </span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
             <div className="grid max-h-64 grid-cols-4 gap-2 overflow-y-auto">
-              {sortedInventoryItems.map((item) => (
+              {filteredAndSortedItems.map((item) => (
                 <button
                   key={item.gear_id}
                   type="button"

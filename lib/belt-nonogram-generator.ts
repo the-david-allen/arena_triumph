@@ -826,6 +826,24 @@ function generateDeterministicMediumHard(
 }
 
 /**
+ * Fixed 5x5 tutorial puzzle for the Belt mini-game.
+ * Row clues: [1,1], [2,2], [3], [2], [2]
+ * Column clues (left to right): [2,2], [4], [1], [2], [2]
+ * Used by the interactive belt tutorial.
+ */
+export const BELT_TUTORIAL_5x5 = {
+  rowHints: [[1, 1], [2, 2], [3], [2], [2]],
+  columnHints: [[2, 2], [4], [1], [2], [2]],
+  solution: [
+    [true, false, true, false, true],    // Row 0: 1 1
+    [true, true, false, true, true],     // Row 1: 2 2
+    [false, true, true, true, false],    // Row 2: 3
+    [true, true, false, false, false],  // Row 3: 2
+    [true, true, false, false, false],   // Row 4: 2
+  ] as boolean[][],
+};
+
+/**
  * Generate a single 12x12 belt nonogram puzzle.
  * Each call uses a new seed (timestamp) so "Play Game" gets a fresh puzzle.
  * Throws if no valid puzzle is found within maxAttempts.

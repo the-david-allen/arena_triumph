@@ -13,6 +13,7 @@ import {
   type CombatStats,
 } from "@/lib/battle";
 import { Button } from "@/components/ui/button";
+import { TutorialButton } from "@/components/tutorial/TutorialButton";
 import { CombatantArea } from "@/components/battle/CombatantArea";
 import { FightStatusDisplay } from "@/components/battle/FightStatusDisplay";
 import { PopTheLock, type HitAccuracy } from "@/components/battle/PopTheLock";
@@ -313,9 +314,12 @@ export default function BattleTierPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-center text-2xl font-bold text-foreground">
-        Battle — Tier {tier}
-      </h1>
+      <div className="flex flex-wrap items-center justify-center gap-4">
+        <h1 className="text-center text-2xl font-bold text-foreground">
+          Battle — Tier {tier}
+        </h1>
+        <TutorialButton tutorialId="battle" variant="outline" />
+      </div>
 
       {/* Status text */}
       <FightStatusDisplay statusText={statusText} />

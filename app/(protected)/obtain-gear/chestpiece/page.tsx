@@ -2,21 +2,18 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Card, CardData } from "@/components/chestpiece/Card";
 import { GameSlot } from "@/components/chestpiece/GameSlot";
 import { fetchChestGameCards, updatePlayCount, getCurrentUserId, updateTopScores, getRewardRarity, getRandomChestByRarity, addToInventory } from "@/lib/chestpiece-game";
 import { checkUserHasItem, addXpToUser, RARITY_XP } from "@/lib/inventory";
+import { ENDGAME_REWARD_DELAY_MS } from "@/lib/game-constants";
 import { getTodayPlayCountForGear } from "@/lib/playcount";
 import { playChestBackgroundMusic, stopChestBackgroundMusic } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { TutorialButton } from "@/components/tutorial/TutorialButton";
+import { useTutorial } from "@/lib/tutorial/use-tutorial";
+import { useGearPageTutorialIntent } from "@/lib/tutorial/use-gear-page-tutorial-intent";
 
 type SlotName =
   | "Helm"
@@ -55,6 +52,8 @@ const HORIZONTAL_LINES: Record<number, SlotName[]> = {
 
 export default function ChestpiecePage() {
   const router = useRouter();
+  const { startTutorial } = useTutorial();
+  useGearPageTutorialIntent("chestpiece", startTutorial);
   const [deck, setDeck] = React.useState<CardData[]>([]);
   const [currentCard, setCurrentCard] = React.useState<CardData | null>(null);
   const [slots, setSlots] = React.useState<SlotState>({
@@ -74,7 +73,6 @@ export default function ChestpiecePage() {
   const [currentScore, setCurrentScore] = React.useState(0);
   const [isGameActive, setIsGameActive] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
-  const [showRules, setShowRules] = React.useState(false);
   const [finalScore, setFinalScore] = React.useState(0);
   const [highlightedLines, setHighlightedLines] = React.useState<Set<string>>(new Set());
   const [highlightedCards, setHighlightedCards] = React.useState<Set<string>>(new Set());
@@ -107,12 +105,6 @@ export default function ChestpiecePage() {
     return () => stopChestBackgroundMusic();
   }, [isGameActive, showCompletionScreen]);
 
-  // #region agent log
-  React.useEffect(() => {
-    console.log('[DEBUG] Deck state changed:', { deckLength: deck.length, isGameActive, isLoading });
-  }, [deck, isGameActive, isLoading]);
-  // #endregion
-
   // Shuffle array function
   const shuffleArray = <T,>(array: T[]): T[] => {
     const shuffled = [...array];
@@ -132,29 +124,13 @@ export default function ChestpiecePage() {
       setTodayPlayCount((prev) => (prev !== null ? prev + 1 : null));
     }
     setIsLoading(true);
-    // #region agent log
-    console.log('[DEBUG] handlePlayGame called, isLoading=true');
-    fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chestpiece/page.tsx:88',message:'handlePlayGame called',data:{isLoading:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C'})}).catch(()=>{});
-    // #endregion
     try {
       const cards = await fetchChestGameCards();
-      // #region agent log
-      console.log('[DEBUG] Cards fetched:', { cardsLength: cards?.length || 0, firstCard: cards?.[0] || null });
-      fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chestpiece/page.tsx:92',message:'Cards fetched',data:{cardsLength:cards?.length||0,firstCard:cards?.[0]||null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       const shuffled = shuffleArray(cards);
-      // #region agent log
-      console.log('[DEBUG] Cards shuffled:', { shuffledLength: shuffled?.length || 0, firstShuffled: shuffled?.[0] || null });
-      fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chestpiece/page.tsx:95',message:'Cards shuffled',data:{shuffledLength:shuffled?.length||0,firstShuffled:shuffled?.[0]||null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
       // Remove 34 cards at random (keep remaining cards for the deck)
       const cardsToRemove = 34;
       const remainingDeck = shuffled.slice(cardsToRemove);
       setDeck(remainingDeck);
-      // #region agent log
-      console.log('[DEBUG] setDeck called with:', { shuffledLength: shuffled?.length || 0 });
-      fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chestpiece/page.tsx:97',message:'setDeck called',data:{shuffledLength:shuffled?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       setCurrentCard(null);
       setSlots({
         Helm: null,
@@ -176,15 +152,8 @@ export default function ChestpiecePage() {
       setHighlightedCards(new Set());
       setSlotBonusActive(new Set());
       setErrorMessage(null);
-      // #region agent log
-      console.log('[DEBUG] Game state initialized:', { isGameActive: true, shuffledLength: shuffled?.length || 0 });
-      fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chestpiece/page.tsx:112',message:'Game state initialized',data:{isGameActive:true,isLoading:false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
     } catch (error) {
       console.error("Failed to start game:", error);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chestpiece/page.tsx:115',message:'Error in handlePlayGame',data:{error:error instanceof Error?error.message:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       const message = error instanceof Error ? error.message : "Failed to start game. Please try again.";
       setErrorMessage(message);
       setIsGameActive(false);
@@ -197,7 +166,7 @@ export default function ChestpiecePage() {
     setFinalScore(finalScore);
     
     // Pause for 2 seconds
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, ENDGAME_REWARD_DELAY_MS));
     
     // Lookup reward and update database
     try {
@@ -235,13 +204,7 @@ export default function ChestpiecePage() {
   };
 
   const handleDrawCard = () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chestpiece/page.tsx:121',message:'handleDrawCard called',data:{deckLength:deck.length,currentCard:currentCard?.card_id||null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
     if (deck.length === 0 || currentCard !== null) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chestpiece/page.tsx:123',message:'handleDrawCard early return',data:{deckLength:deck.length,currentCard:currentCard?.card_id||null,reason:deck.length===0?'deck empty':'currentCard exists'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
       return;
     }
 
@@ -249,9 +212,6 @@ export default function ChestpiecePage() {
     const drawnCard = newDeck.shift()!;
     setDeck(newDeck);
     setCurrentCard(drawnCard);
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chestpiece/page.tsx:130',message:'Card drawn',data:{drawnCardId:drawnCard?.card_id,newDeckLength:newDeck.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
   };
 
   const checkLineMatch = (lineSlots: SlotName[], slots: SlotState): boolean => {
@@ -436,18 +396,6 @@ export default function ChestpiecePage() {
     }
   }, [showCompletionScreen, rewardChestpiece, rewardXp]);
 
-  const rulesText = `Click the top card of the deck to reveal the next card which you may play into a slot or drag to the Discard pile.  The game ends when all slots are filled or the deck is empty.
-
-Each card has a value that will add to your score.  It also has several possible bonuses:
-Slot Bonus: If you place the card into the corresponding slot, you receive this bonus.
-Horizontal Bonus: If all slots in the row match in color, you recieve the horizontal bonus for each.
-Vertical Bonus: If all slots in the row match in color, you recieve the vertical bonus for each.
-
-The Deck contains 33 cards randomly selected from the full 67 card pool.  The pool contains:
- 11 Purple (highest value)
- 22 Green (medium value)
- 33 White (lowest value)`;
-
   // Show completion screen if flag is set
   if (showCompletionScreen) {
     return (
@@ -500,9 +448,7 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
               ? "No plays remaining today"
               : "Play Game"}
         </Button>
-        <Button variant="outline" onClick={() => setShowRules(true)}>
-          Rules
-        </Button>
+        <TutorialButton tutorialId="chestpiece" variant="outline" />
       </div>
 
       {/* Error message */}
@@ -529,9 +475,6 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
                 <button
                   onClick={handleDrawCard}
                   disabled={deck.length === 0 || currentCard !== null}
-                  // #region agent log
-                  onMouseEnter={()=>{fetch('http://127.0.0.1:7242/ingest/48848a1b-9019-4cd4-a6a6-ace0c21a0b17',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chestpiece/page.tsx:310',message:'Deck button render',data:{deckLength:deck.length,currentCard:currentCard?.card_id||null,disabled:deck.length===0||currentCard!==null,isGameActive},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C,D,E'})}).catch(()=>{});}}
-                  // #endregion
                   className={cn(
                     "w-24 h-32 rounded-lg border-2 border-gray-600 overflow-hidden",
                     "flex items-center justify-center shadow-lg relative",
@@ -842,18 +785,6 @@ The Deck contains 33 cards randomly selected from the full 67 card pool.  The po
           </div>
         </div>
       )}
-
-      {/* Rules Dialog */}
-      <Dialog open={showRules} onOpenChange={setShowRules}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Game Rules</DialogTitle>
-            <DialogDescription className="whitespace-pre-line">
-              {rulesText}
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
 
     </div>
   );

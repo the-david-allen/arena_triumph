@@ -80,9 +80,9 @@ export async function updatePlayCount(userId: string): Promise<void> {
 
 /**
  * Updates the top 10 scores for a user's Shoulders game
- * Keeps the 10 highest scores
+ * Note: For shoulders (Weapon grid game), lower turns = better, so we track the 10 lowest scores
  */
-export async function updateTopScores(userId: string, score: number): Promise<void> {
+export async function updateTopScores(userId: string, turns: number): Promise<void> {
   const supabase = createClient();
   const gearType = "Shoulders";
 
@@ -92,7 +92,7 @@ export async function updateTopScores(userId: string, score: number): Promise<vo
       .select("score")
       .eq("user_id", userId)
       .eq("gear_type", gearType)
-      .order("score", { ascending: false });
+      .order("score", { ascending: true });
 
     if (fetchError) {
       console.error("Error fetching top scores:", fetchError);
@@ -101,8 +101,8 @@ export async function updateTopScores(userId: string, score: number): Promise<vo
 
     const scores = existingScores || [];
     const hasLessThan10 = scores.length < 10;
-    const tenthHighestScore = scores.length >= 10 ? scores[9].score : null;
-    const qualifies = hasLessThan10 || (tenthHighestScore !== null && score > tenthHighestScore);
+    const tenthLowestScore = scores.length >= 10 ? scores[9].score : null;
+    const qualifies = hasLessThan10 || (tenthLowestScore !== null && turns <= tenthLowestScore);
 
     if (!qualifies) {
       return;
@@ -113,7 +113,7 @@ export async function updateTopScores(userId: string, score: number): Promise<vo
       .insert({
         user_id: userId,
         gear_type: gearType,
-        score,
+        score: turns,
         created_at: new Date().toISOString(),
       });
 
@@ -127,7 +127,7 @@ export async function updateTopScores(userId: string, score: number): Promise<vo
       .select("score, created_at")
       .eq("user_id", userId)
       .eq("gear_type", gearType)
-      .order("score", { ascending: false });
+      .order("score", { ascending: true });
 
     if (refetchError) {
       console.error("Error refetching top scores:", refetchError);
@@ -141,7 +141,7 @@ export async function updateTopScores(userId: string, score: number): Promise<vo
         .delete()
         .eq("user_id", userId)
         .eq("gear_type", gearType)
-        .lt("score", tenthScore);
+        .gt("score", tenthScore);
 
       if (deleteError) {
         console.error("Error deleting excess scores:", deleteError);
@@ -153,18 +153,18 @@ export async function updateTopScores(userId: string, score: number): Promise<vo
 }
 
 /**
- * Gets the reward rarity based on final score
- * Finds the highest min_score <= score from shoulders_rewards_lookup
+ * Gets the reward rarity based on turns (turns-based; lower turns = better)
+ * Queries shoulders_rewards_lookup (max_score) to find the lowest max_score >= turns
  */
-export async function getRewardRarity(score: number): Promise<string | null> {
+export async function getRewardRarity(turns: number): Promise<string | null> {
   const supabase = createClient();
 
   try {
     const { data, error } = await supabase
       .from("shoulders_rewards_lookup")
       .select("rarity")
-      .lte("min_score", score)
-      .order("min_score", { ascending: false })
+      .gte("max_score", turns)
+      .order("max_score", { ascending: true })
       .limit(1)
       .single();
 

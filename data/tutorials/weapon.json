@@ -1,0 +1,19 @@
+{
+  "id": "weapon",
+  "version": 1,
+  "steps": [
+    {
+      "id": "intro",
+      "placement": "center",
+      "arrow": "none",
+      "spotlight": false,
+      "content": {
+        "title": "Weapon Mini-Game",
+        "body": "Complete the weapon mini-game to earn a new weapon.",
+        "cta": "Got it"
+      },
+      "advanceOnTap": true,
+      "animation": "fade"
+    }
+  ]
+}

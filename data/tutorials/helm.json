@@ -1,0 +1,19 @@
+{
+  "id": "helm",
+  "version": 1,
+  "steps": [
+    {
+      "id": "intro",
+      "placement": "center",
+      "arrow": "none",
+      "spotlight": false,
+      "content": {
+        "title": "Helm Mini-Game",
+        "body": "Complete the helm mini-game to earn a new helm. Check the rules for how to play.",
+        "cta": "Got it"
+      },
+      "advanceOnTap": true,
+      "animation": "fade"
+    }
+  ]
+}
